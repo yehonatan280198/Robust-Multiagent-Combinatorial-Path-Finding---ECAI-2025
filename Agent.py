@@ -42,5 +42,8 @@ class Agent:
             return True, next_step
         return False, next_step
 
+    def get_nextMove(self):
+        return self.planned_path[0]
+
     def get_delay_by_manufacturer(self):
         return self.delay_by_manufacturer
