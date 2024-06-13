@@ -1,10 +1,14 @@
 class Agent:
-    def __init__(self, delay_by_manufacturer, location, color):
+    def __init__(self, delay_by_manufacturer, location, color, agent_id):
         self.delay_by_manufacturer = delay_by_manufacturer
+        self.agent_id = agent_id
         self.location = location
         self.goals = []
         self.planned_path = []
         self.color = color
+
+    def get_id(self):
+        return self.agent_id
 
     def set_location(self, location):
         self.location = location
