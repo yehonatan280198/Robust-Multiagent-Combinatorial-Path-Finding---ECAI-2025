@@ -43,7 +43,8 @@ def initialize_simulation(grid_size, num_agents, num_goals, taken_slots):
         if location not in init_location:
             init_location.append(location)
             taken_slots.add(location)
-            agents.append(Agent(delay_by_manufacturer=randint(1, 3), location=location, color=colors[len(init_location) % len(colors)], agent_id=len(init_location) + 1))
+            agents.append(Agent(delay_by_manufacturer=randint(1, 3), location=location,
+                                color=colors[len(init_location) % len(colors)], agent_id=len(init_location)))
 
     agent_indices, goal_indices = Solve_The_Assignment_Problem(agents, goals)
 

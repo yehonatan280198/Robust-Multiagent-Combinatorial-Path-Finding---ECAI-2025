@@ -19,13 +19,13 @@ def Try_Move(agent, goals, taken_slots):
 
 
 class SimulatorApp:
-    def __init__(self, root):
+    def __init__(self, root, grid_size, num_agents, num_goals):
         self.root = root
+        self.grid_size = grid_size
         self.units_of_time = 0
-        self.grid_size, self.num_agents, self.num_goals = 10, 6, 6
         self.taken_slots = set()
 
-        self.agents, self.goals = initialize_simulation(self.grid_size, self.num_agents, self.num_goals, self.taken_slots)
+        self.agents, self.goals = initialize_simulation(self.grid_size, num_agents, num_goals, self.taken_slots)
 
         initialize_visualize(self)
 
@@ -47,5 +47,5 @@ class SimulatorApp:
 if __name__ == "__main__":
     Root = tk.Tk()
     Root.title("Multi-Agent Simulator")
-    SimulatorApp(Root)
+    SimulatorApp(Root, 12, 10, 10)
     Root.mainloop()

@@ -36,5 +36,5 @@ def visualize(SimulatorAppObj):
             SimulatorAppObj.ax.plot(step[1], step[0], '.', color=agent.get_color(), markersize=5)
 
     SimulatorAppObj.canvas.draw()
-    SimulatorAppObj.root.after(200, SimulatorAppObj.run_simulation)
+    SimulatorAppObj.root.after(150, SimulatorAppObj.run_simulation)
 
