@@ -1,5 +1,5 @@
+import random
 from random import randint
-import matplotlib.colors as mcolors
 from scipy.optimize import linear_sum_assignment
 import numpy as np
 
@@ -29,26 +29,26 @@ def generate_path(agent, goal):
     agent.set_planned_path(path)
 
 
-def initialize_simulation(grid_size, num_agents, num_goals, taken_slots):
-    colors = list(mcolors.TABLEAU_COLORS.values())
+def initialize_simulation(num_agents, num_goals, grid):
     goals, init_location, agents = [], [], []
 
     while len(goals) < num_goals:
-        location = (randint(4, grid_size - 1), randint(0, grid_size - 1))
+        location = (randint(4, len(grid) - 1), randint(0, len(grid) - 1))
         if location not in goals:
             goals.append(location)
 
     while len(init_location) < num_agents:
-        location = (0, randint(0, grid_size - 1))
+        location = (0, randint(0, len(grid) - 1))
         if location not in init_location:
             init_location.append(location)
-            taken_slots.add(location)
             agents.append(Agent(delay_by_manufacturer=randint(1, 3), location=location,
-                                color=colors[len(init_location) % len(colors)], agent_id=len(init_location)))
+                                failure_probability=random.random()))
+            grid[location[0]][location[1]] = agents[-1]
 
     agent_indices, goal_indices = Solve_The_Assignment_Problem(agents, goals)
 
-    for agent_index, goal_index in zip(agent_indices, goal_indices):
+    #for agent_index, goal_index in zip(agent_indices, goal_indices):
+    for agent_index, goal_index in zip(range(0, 10), range(0, 10)):
         agents[agent_index].add_goal(goals[goal_index])
         generate_path(agents[agent_index], goals[goal_index])
 
