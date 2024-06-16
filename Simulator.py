@@ -1,6 +1,6 @@
 import tkinter as tk
 from Initialize_Simulator import initialize_simulation
-from visualization import initialize_visualize, visualize
+from Visualization import initialize_visualize, visualize
 
 
 def findFreeSlot(agent, grid, direction):
@@ -62,7 +62,7 @@ class SimulatorApp:
 
         for agent in self.agents:
             print(f"Delay by manufacturer A{agent.get_id()} {agent.get_delay_by_manufacturer()}")
-        print( "----------------------------------------------------------------")
+        print("----------------------------------------------------------------")
         self.run_simulation()
 
     def run_simulation(self):
@@ -72,13 +72,11 @@ class SimulatorApp:
                 if len(agent.get_planned_path()) != 0 and self.units_of_time % agent.get_delay_by_manufacturer() == 0:
                     Try_Move(agent, self.goals, self.grid, self.units_of_time)
 
-            visualize(self)
+            visualize(self, self.units_of_time)
 
         else:
             for agent in self.agents:
                 print(f"Delay by observations A{agent.get_id()} {agent.get_delay_by_observations()}")
-
-            print(f"Simulation completed in {self.units_of_time} units of time\n")
 
 
 if __name__ == "__main__":

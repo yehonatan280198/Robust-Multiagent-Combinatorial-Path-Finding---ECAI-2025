@@ -4,9 +4,9 @@ import numpy as np
 import tkinter as tk
 import matplotlib.colors as mcolors
 
-
 colors = list(mcolors.TABLEAU_COLORS.values())
 agentsColors = {}
+
 
 def initialize_visualize(SimulatorAppObj):
     SimulatorAppObj.fig, SimulatorAppObj.ax = plt.subplots(figsize=(6, 6))
@@ -14,7 +14,7 @@ def initialize_visualize(SimulatorAppObj):
     SimulatorAppObj.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
 
-def visualize(SimulatorAppObj):
+def visualize(SimulatorAppObj, time_step):
     grid_size = len(SimulatorAppObj.grid)
     SimulatorAppObj.ax.clear()
     SimulatorAppObj.ax.set_xlim(-0.5, grid_size - 0.5)
@@ -41,6 +41,7 @@ def visualize(SimulatorAppObj):
         # for step in agent.get_planned_path()[:-1]:
         #     SimulatorAppObj.ax.plot(step[1], step[0], '.', color=agentsColors[agent.get_id()], markersize=5)
 
+    SimulatorAppObj.ax.set_title(f"Units Of Time: {time_step}", fontsize=16, loc='center')
+
     SimulatorAppObj.canvas.draw()
     SimulatorAppObj.root.after(150, SimulatorAppObj.run_simulation)
-
