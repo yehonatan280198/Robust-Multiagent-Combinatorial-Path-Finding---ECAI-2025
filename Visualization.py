@@ -44,4 +44,3 @@ def visualize(SimulatorAppObj, time_step):
     SimulatorAppObj.ax.set_title(f"Units Of Time: {time_step}", fontsize=16, loc='center')
 
     SimulatorAppObj.canvas.draw()
-    SimulatorAppObj.root.after(150, SimulatorAppObj.run_simulation)

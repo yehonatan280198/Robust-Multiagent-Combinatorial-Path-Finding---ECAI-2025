@@ -1,9 +1,20 @@
+import copy
 import math
 import itertools
 
 
+def replanning(agents, goals):
+    pass
+
+
 def Calc_Finish_Time_After_Replanning(remain_set, goals):
-    return 10
+    replanning(remain_set, goals)
+
+    max_time_to_finish = -math.inf
+    for agent in remain_set:
+        max_time_to_finish = max(max_time_to_finish, len(agent.get_planned_path()))
+
+    return max_time_to_finish
 
 
 def Find_Who_To_Repair(agents, goals):

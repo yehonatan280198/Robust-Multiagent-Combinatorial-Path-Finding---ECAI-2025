@@ -2,7 +2,6 @@ import random
 from random import randint
 from scipy.optimize import linear_sum_assignment
 import numpy as np
-
 from Agent import Agent
 
 
@@ -47,8 +46,8 @@ def initialize_simulation(num_agents, num_goals, grid):
 
     agent_indices, goal_indices = Solve_The_Assignment_Problem(agents, goals)
 
-    #for agent_index, goal_index in zip(agent_indices, goal_indices):
-    for agent_index, goal_index in zip(range(0, 10), range(0, 10)):
+    for agent_index, goal_index in zip(agent_indices, goal_indices):
+    #for agent_index, goal_index in zip(range(0, 10), range(0, 10)):
         agents[agent_index].add_goal(goals[goal_index])
         generate_path(agents[agent_index], goals[goal_index])
 

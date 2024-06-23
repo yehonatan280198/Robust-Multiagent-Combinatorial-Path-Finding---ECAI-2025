@@ -1,4 +1,6 @@
 import tkinter as tk
+
+from Diagnosis import Find_Who_To_Repair
 from Initialize_Simulator import initialize_simulation
 from Visualization import initialize_visualize, visualize
 
@@ -73,6 +75,10 @@ class SimulatorApp:
                     Try_Move(agent, self.goals, self.grid, self.units_of_time)
 
             visualize(self, self.units_of_time)
+            who = Find_Who_To_Repair(self.agents, self.goals)
+            self.agents = list(who - set(self.goals))
+
+            self.root.after(150, self.run_simulation)
 
         else:
             for agent in self.agents:
