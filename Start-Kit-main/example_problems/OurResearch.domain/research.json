@@ -1,0 +1,9 @@
+{
+    "mapFile": "research_map_12X12.map",
+    "agentFile": "research_5_agents.agents",
+    "teamSize": 5,
+    "taskFile": "research_7_tasks.tasks",
+    "numTasksReveal": 1,
+    "taskAssignmentStrategy": "Constant_Delay_And_Full_Observation",
+    "delays": "1,2,1,2,1"
+}

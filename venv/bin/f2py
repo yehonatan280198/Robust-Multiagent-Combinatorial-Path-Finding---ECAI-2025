@@ -1,4 +1,4 @@
-#!/home/yonikid/Desktop/MultiAgent/venv/bin/python3.12
+#!/home/yonikid/Desktop/SimulatorAgents/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
