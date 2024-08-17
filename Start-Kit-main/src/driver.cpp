@@ -33,13 +33,29 @@ void sigint_handler(int a)
     _exit(0);
 }
 
-std::vector<int> convertStringToVector(const std::string& str) {
-    std::vector<int> result;
-    std::stringstream ss(str);
+std::vector<std::pair<int, double>> convertStringToVector(const std::string& delays, const std::string& failureProbability) {
+    std::vector<int> delaysVec;
+    std::stringstream ssDelays(delays);
     std::string item;
 
-    while (std::getline(ss, item, ',')) {
-        result.push_back(std::stoi(item));  // Convert each substring to int and add to vector
+    // Convert delays to vector of int
+    while (std::getline(ssDelays, item, ',')) {
+        delaysVec.push_back(std::stoi(item));
+    }
+
+    std::vector<double> failureProbabilityVec;
+    std::stringstream ssFailure(failureProbability);
+
+    // Convert failureProbability to vector of double
+    while (std::getline(ssFailure, item, ',')) {
+        failureProbabilityVec.push_back(std::stod(item));
+    }
+
+    std::vector<std::pair<int, double>> result;
+
+    // Combine delays and failureProbability into a vector of pairs
+    for (size_t i = 0; i < delaysVec.size(); ++i) {
+        result.push_back(std::make_pair(delaysVec[i], failureProbabilityVec[i]));
     }
 
     return result;
@@ -132,7 +148,10 @@ int main(int argc, char **argv)
     int team_size = read_param_json<int>(data, "teamSize");
 
     std::string delaysStr = read_param_json<std::string>(data, "delays");
-    std::vector<int> delays = convertStringToVector(delaysStr);
+    std::string failureProbabilityStr = read_param_json<std::string>(data, "failureProbability");
+    std::vector<std::pair<int, double>> Delay_Failure = convertStringToVector(delaysStr, failureProbabilityStr);
+
+    int diagnosisTime = read_param_json<int>(data, "timeToDiagnosis");
 
     std::vector<int> agents = read_int_vec(base_folder + read_param_json<std::string>(data, "agentFile"), team_size);
     std::vector<int> tasks = read_int_vec(base_folder + read_param_json<std::string>(data, "taskFile"));
@@ -142,7 +161,7 @@ int main(int argc, char **argv)
     std::string task_assignment_strategy = data["taskAssignmentStrategy"].get<std::string>();
     if (task_assignment_strategy == "Constant_Delay_And_Full_Observation")
     {
-        system_ptr = std::make_unique<ConstantDelayAndFullObservation>(grid, planner, agents, tasks, model, delays);
+        system_ptr = std::make_unique<AllocationByMakespan>(grid, planner, agents, tasks, model, Delay_Failure, diagnosisTime);
     }
     else
     {

@@ -51,7 +51,10 @@ PYBIND11_MODULE(MAPF, m ){
         .def_readonly("map_name",&SharedEnvironment::map_name)
         .def_readonly("file_storage_path", &SharedEnvironment::file_storage_path)
         .def_readonly("curr_states",&SharedEnvironment::curr_states)
-        .def_readonly("delays",&SharedEnvironment::delays);
+        .def_readonly("manufacturerDelay_FailureProbability",&SharedEnvironment::manufacturerDelay_FailureProbability)
+        .def_readonly("observationDelay_TotalMoves",&SharedEnvironment::observationDelay_TotalMoves)
+        .def_readonly("timeToDiagnosis",&SharedEnvironment::timeToDiagnosis)
+        .def_readwrite("sizeOfMaxPlan",&SharedEnvironment::sizeOfMaxPlan);
 
 
 

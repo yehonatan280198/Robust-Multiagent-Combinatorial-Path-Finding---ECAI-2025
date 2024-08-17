@@ -49,78 +49,86 @@ class pyMAPFPlanner:
 
         return neighbors
 
-    def space_time_plan(self, start: int, start_direct: int, end: int, reservation: Set[Tuple[int, int, int]]):
-        print(start, start_direct, end)
-        path = []
-        open_list = PriorityQueue()
-        all_nodes = {}  # loc+dict, t
-        parent = {}
-        s = (start, start_direct, 0, self.getManhattanDistance(start, end))
-        open_list.put((s[3], id(s), s))
-        parent[(start * 4 + start_direct, 0)] = None
+    def space_time_plan(self, start: int, start_direct: int, goals, reservation: Set[Tuple[int, int, int]]):
+        allPath = []
+        for end, _ in goals:
+            print(start, start_direct, end)
+            path = []
+            open_list = PriorityQueue()
+            all_nodes = {}  # loc+dict, t
+            parent = {}
+            s = (start, start_direct, 0, self.getManhattanDistance(start, end))
+            open_list.put((s[3], id(s), s))
+            parent[(start * 4 + start_direct, 0)] = None
 
-        while not open_list.empty():
-            _, _, curr = open_list.get()
-            curr_location, curr_direction, curr_g, _ = curr
+            while not open_list.empty():
+                _, _, curr = open_list.get()
+                curr_location, curr_direction, curr_g, _ = curr
 
-            if (curr_location * 4 + curr_direction, curr_g) in all_nodes:
-                continue
-
-            all_nodes[(curr_location * 4 + curr_direction, curr_g)] = curr
-            if curr_location == end:
-                while True:
-                    path.append((curr[0], curr[1]))
-                    curr = parent[(curr[0] * 4 + curr[1], curr[2])]
-                    if curr is None:
-                        break
-
-                path.pop()
-                path.reverse()
-                break
-
-            neighbors = self.getNeighbors(curr_location, curr_direction)
-
-            for neighbor in neighbors:
-                neighbor_location, neighbor_direction = neighbor
-
-                if (neighbor_location, -1, curr[2] + 1) in reservation:
+                if (curr_location * 4 + curr_direction, curr_g) in all_nodes:
                     continue
 
-                if (neighbor_location, curr_location, curr[2] + 1) in reservation:
-                    continue
+                all_nodes[(curr_location * 4 + curr_direction, curr_g)] = curr
+                if curr_location == end:
+                    while True:
+                        path.append((curr[0], curr[1]))
+                        curr = parent[(curr[0] * 4 + curr[1], curr[2])]
+                        if curr is None:
+                            break
 
-                neighbor_key = (neighbor_location * 4 +
-                                neighbor_direction, curr[2] + 1)
+                    path.pop()
+                    path.reverse()
+                    break
 
-                if neighbor_key in all_nodes:
-                    old = all_nodes[neighbor_key]
-                    if curr_g + 1 < old[2]:
-                        old = (old[0], old[1], curr_g + 1, old[3], old[4])
-                else:
-                    next_node = (neighbor_location, neighbor_direction, curr_g + 1,
-                                 self.getManhattanDistance(neighbor_location, end))
+                neighbors = self.getNeighbors(curr_location, curr_direction)
 
-                    open_list.put(
-                        (next_node[3] + next_node[2], id(next_node), next_node))
+                for neighbor in neighbors:
+                    neighbor_location, neighbor_direction = neighbor
 
-                    parent[(neighbor_location * 4 +
-                            neighbor_direction, next_node[2])] = curr
+                    if (neighbor_location, -1, curr[2] + 1) in reservation:
+                        continue
 
-        for v in path:
+                    if (neighbor_location, curr_location, curr[2] + 1) in reservation:
+                        continue
+
+                    neighbor_key = (neighbor_location * 4 +
+                                    neighbor_direction, curr[2] + 1)
+
+                    if neighbor_key in all_nodes:
+                        old = all_nodes[neighbor_key]
+                        if curr_g + 1 < old[2]:
+                            old = (old[0], old[1], curr_g + 1, old[3], old[4])
+                    else:
+                        next_node = (neighbor_location, neighbor_direction, curr_g + 1,
+                                     self.getManhattanDistance(neighbor_location, end))
+
+                        open_list.put(
+                            (next_node[3] + next_node[2], id(next_node), next_node))
+
+                        parent[(neighbor_location * 4 +
+                                neighbor_direction, next_node[2])] = curr
+
+            allPath.append(path)
+            start, start_direct = path[-1][0], path[-1][1]
+
+        allPath = [item for sublist in allPath for item in sublist]
+        for v in allPath:
             print(f"({v[0]},{v[1]}), ", end="")
         print()
-        return path
+        return allPath
 
     def sample_priority_planner(self, time_limit: int):
 
         actions = [MAPF.Action.W] * len(self.env.curr_states)
         reservation = set()  # loc1, loc2, t
+        AllPathSize = []
 
         for i in range(self.env.num_of_agents):
             print("start plan for agent", i)
             path = []
 
             if not self.env.goal_locations[i]:
+                AllPathSize.append(0)
                 print("Which does not have any goal left.")
                 path.append((self.env.curr_states[i].location, self.env.curr_states[i].orientation))
                 reservation.add((self.env.curr_states[i].location, -1, 1))
@@ -130,9 +138,11 @@ class pyMAPFPlanner:
                 path = self.space_time_plan(
                     self.env.curr_states[i].location,
                     self.env.curr_states[i].orientation,
-                    self.env.goal_locations[i][0][0],
+                    # self.env.goal_locations[i][0][0],
+                    self.env.goal_locations[i],
                     reservation
                 )
+                AllPathSize.append(self.env.observationDelay_TotalMoves[i][0] * len(path))
 
             if path:
                 print("current location:", path[0][0], "current direction:", path[0][1])
@@ -154,6 +164,7 @@ class pyMAPFPlanner:
                     last_loc = p[0]
                     t += 1
 
+        self.env.sizeOfMaxPlan = max(AllPathSize)
         return actions
 
 

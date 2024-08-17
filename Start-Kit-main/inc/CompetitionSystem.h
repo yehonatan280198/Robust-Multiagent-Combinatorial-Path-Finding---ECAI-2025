@@ -43,7 +43,7 @@ public:
 
     void savePaths(const string &fileName, int option) const; //option = 0: save actual movement, option = 1: save planner movement
     //void saveSimulationIssues(const string &fileName) const;
-    void saveResults(const string &fileName, int screen) const;
+    void saveResults(const string &fileName, int screen);
 
 
 protected:
@@ -71,7 +71,8 @@ protected:
     vector<State> starts;
     int num_of_agents;
 
-    std::vector<int> delays;
+    std::vector<std::pair<int, double>> manufacturerDelay_FailureProbability;
+    int timeToDiagnosis;
 
     vector<State> curr_states;
 
@@ -107,10 +108,10 @@ protected:
 };
 
 
-class ConstantDelayAndFullObservation : public BaseSystem
+class AllocationByMakespan : public BaseSystem
 {
 public:
-	ConstantDelayAndFullObservation(Grid &grid, MAPFPlanner* planner, std::vector<int>& start_locs, std::vector<int>& tasks, ActionModelWithRotate* model, std::vector<int> delaysVec):
+	AllocationByMakespan(Grid &grid, MAPFPlanner* planner, std::vector<int>& start_locs, std::vector<int>& tasks, ActionModelWithRotate* model, std::vector<std::pair<int, double>>& Delay_Failure, int diagnosisTime):
         BaseSystem(grid, planner, model)
     {
         int task_id = 0;
@@ -127,10 +128,11 @@ public:
             starts[i] = State(start_locs[i], 0, 0);
         }
 
-        delays = delaysVec;
+        manufacturerDelay_FailureProbability = Delay_Failure;
+        timeToDiagnosis = diagnosisTime;
     };
 
-	~ConstantDelayAndFullObservation(){};
+	~AllocationByMakespan(){};
 
 
 private:
