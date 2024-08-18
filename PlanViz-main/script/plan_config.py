@@ -267,7 +267,7 @@ class PlanConfig:
                 if a_time == -1:
                     continue
                 for tid in self.events["assigned"][a_time]:
-                    _task_ = data["tasks"][tid]
+                    _task_ = data["tasks"][tid-1]
                     # assert tid == _task_[0]
                     _tloc_ = (_task_[1], _task_[2])
                     _tobj_ = self.render_obj(tid, _tloc_, "rectangle", TASK_COLORS["unassigned"])
