@@ -45,7 +45,6 @@ public:
     //void saveSimulationIssues(const string &fileName) const;
     void saveResults(const string &fileName, int screen);
 
-
 protected:
     Grid map;
 
@@ -66,7 +65,6 @@ protected:
     int plan_time_limit = 3;
 
     std::vector<Path> paths;
-    std::vector<std::list<Task > > finished_tasks; // location + finish time
 
     vector<State> starts;
     int num_of_agents;
@@ -83,6 +81,7 @@ protected:
     vector< deque<Task > > assigned_tasks;
 
     vector<list<std::tuple<int,int,std::string>>> events;
+    std::vector<Task> unfinishedTasks;
     list<Task> all_tasks;
 
     //for evaluation
@@ -94,17 +93,15 @@ protected:
 
 	void initialize();
     bool planner_initialize();
-	virtual void update_tasks() = 0;
+	virtual void update_tasks(std::vector<int>& currentAgents) = 0;
+	virtual void Find_Who_To_Repair_And_The_Remain_Agents() = 0;
 
     void sync_shared_env();
 
-    list<Task> move(vector<Action>& actions, int timestep);
-    bool valid_moves(vector<State>& prev, vector<Action>& next);
+    void move(vector<Action>& actions, int timestep);
+
 
     void log_preprocessing(bool succ);
-    void log_event_assigned(int agent_id, int task_id, int timestep);
-    void log_event_finished(int agent_id, int task_id, int timestep);
-
 };
 
 
@@ -115,17 +112,17 @@ public:
         BaseSystem(grid, planner, model)
     {
         int task_id = 0;
-        for (auto& task_location: tasks)
-        {
-//            all_tasks.emplace_back(task_id++, task_location);
-//            task_queue.emplace_back(all_tasks.back().task_id, all_tasks.back().location);
-              task_queue.emplace_back(task_id++, task_location);
+        for (auto& task_location: tasks){
+            all_tasks.emplace_back(task_id++, task_location);
+            unfinishedTasks.emplace_back(task_id, task_location);
         }
         num_of_agents = start_locs.size();
         starts.resize(num_of_agents);
         for (size_t i = 0; i < start_locs.size(); i++)
         {
             starts[i] = State(start_locs[i], 0, 0);
+            env->curAgents.push_back(i);
+            env->lastTimeMove.push_back(0);
         }
 
         manufacturerDelay_FailureProbability = Delay_Failure;
@@ -136,7 +133,7 @@ public:
 
 
 private:
-    deque<Task> task_queue;
 
-	void update_tasks();
+	void update_tasks(std::vector<int>& currentAgents);
+	void Find_Who_To_Repair_And_The_Remain_Agents();
 };

@@ -38,7 +38,8 @@ PYBIND11_MODULE(MAPF, m ){
         .value("FW",Action::FW)
         .value("CR",Action::CR)
         .value("CCR",Action::CCR)
-        .value("W",Action::W);
+        .value("W",Action::W)
+        .value("NA",Action::NA);
 
     pybind11::class_<SharedEnvironment>(m,"SharedEnvironment")
         .def(pybind11::init<>())
@@ -52,9 +53,11 @@ PYBIND11_MODULE(MAPF, m ){
         .def_readonly("file_storage_path", &SharedEnvironment::file_storage_path)
         .def_readonly("curr_states",&SharedEnvironment::curr_states)
         .def_readonly("manufacturerDelay_FailureProbability",&SharedEnvironment::manufacturerDelay_FailureProbability)
-        .def_readonly("observationDelay_TotalMoves",&SharedEnvironment::observationDelay_TotalMoves)
-        .def_readonly("timeToDiagnosis",&SharedEnvironment::timeToDiagnosis)
-        .def_readwrite("sizeOfMaxPlan",&SharedEnvironment::sizeOfMaxPlan);
+        .def_readwrite("observationDelay_TotalMoves",&SharedEnvironment::observationDelay_TotalMoves)
+        .def_readwrite("timeToDiagnosis",&SharedEnvironment::timeToDiagnosis)
+        .def_readwrite("makeSpanForCurPlan",&SharedEnvironment::makeSpanForCurPlan)
+        .def_readwrite("curAgents",&SharedEnvironment::curAgents)
+        .def_readwrite("lastTimeMove",&SharedEnvironment::lastTimeMove);
 
 
 

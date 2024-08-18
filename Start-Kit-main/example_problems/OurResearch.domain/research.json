@@ -5,7 +5,7 @@
     "taskFile": "research_tasks.tasks",
     "numTasksReveal": 1,
     "taskAssignmentStrategy": "Constant_Delay_And_Full_Observation",
-    "delays": "1,2,1,2,1",
+    "delays": "1,1,1,1,1",
     "failureProbability": "0,0,0,0,0",
     "timeToDiagnosis": 15
 }

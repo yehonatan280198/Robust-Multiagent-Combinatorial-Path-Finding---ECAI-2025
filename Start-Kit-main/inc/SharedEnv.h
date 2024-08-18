@@ -24,7 +24,10 @@ public:
     std::vector<std::pair<int, double>> manufacturerDelay_FailureProbability;
     std::vector<std::pair<double, int>> observationDelay_TotalMoves;
     int timeToDiagnosis;
-    double sizeOfMaxPlan;
+    double makeSpanForCurPlan;
+    std::vector<int> curAgents;
+    std::vector<int> lastTimeMove;
+
 
     SharedEnvironment(){}
 };

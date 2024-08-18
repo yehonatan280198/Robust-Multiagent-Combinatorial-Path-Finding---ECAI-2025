@@ -128,6 +128,7 @@ class pyMAPFPlanner:
             path = []
 
             if not self.env.goal_locations[i]:
+                actions[i] = MAPF.Action.NA
                 AllPathSize.append(0)
                 print("Which does not have any goal left.")
                 path.append((self.env.curr_states[i].location, self.env.curr_states[i].orientation))
@@ -164,7 +165,7 @@ class pyMAPFPlanner:
                     last_loc = p[0]
                     t += 1
 
-        self.env.sizeOfMaxPlan = max(AllPathSize)
+        self.env.makeSpanForCurPlan = max(AllPathSize)
         return actions
 
 
