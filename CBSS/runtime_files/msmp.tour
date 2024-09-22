@@ -1,0 +1,18 @@
+NAME : mtspf.5000053.tour
+COMMENT : Length = 5000053
+COMMENT : Found by LKH [Keld Helsgaun] Sun Sep 22 18:09:56 2024
+TYPE : TOUR
+DIMENSION : 10
+TOUR_SECTION
+1
+6
+5
+10
+9
+4
+3
+8
+7
+2
+-1
+EOF

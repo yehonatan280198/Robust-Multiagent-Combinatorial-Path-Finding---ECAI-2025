@@ -145,36 +145,22 @@ int main(int argc, char **argv)
     ActionModelWithRotate *model = new ActionModelWithRotate(grid);
     model->set_logger(logger);
 
-    int team_size = read_param_json<int>(data, "teamSize");
-
     std::string delaysStr = read_param_json<std::string>(data, "delays");
     std::string failureProbabilityStr = read_param_json<std::string>(data, "failureProbability");
     std::vector<std::pair<int, double>> Delay_Failure = convertStringToVector(delaysStr, failureProbabilityStr);
 
     int diagnosisTime = read_param_json<int>(data, "timeToDiagnosis");
 
-    std::vector<int> agents = read_int_vec(base_folder + read_param_json<std::string>(data, "agentFile"), team_size);
+    std::vector<int> agents = read_int_vec(base_folder + read_param_json<std::string>(data, "agentFile"));
     std::vector<int> tasks = read_int_vec(base_folder + read_param_json<std::string>(data, "taskFile"));
     if (agents.size() > tasks.size())
         logger->log_warning("Not enough tasks for robots (number of tasks < team size)");
 
-    std::string task_assignment_strategy = data["taskAssignmentStrategy"].get<std::string>();
-    if (task_assignment_strategy == "Constant_Delay_And_Full_Observation")
-    {
-        system_ptr = std::make_unique<AllocationByMakespan>(grid, planner, agents, tasks, model, Delay_Failure, diagnosisTime);
-    }
-    else
-    {
-        std::cerr << "unkown task assignment strategy " << data["taskAssignmentStrategy"].get<std::string>() << std::endl;
-        logger->log_fatal("unkown task assignment strategy " + data["taskAssignmentStrategy"].get<std::string>());
-        exit(1);
-    }
+    system_ptr = std::make_unique<AllocationByMakespan>(grid, planner, agents, tasks, model, Delay_Failure, diagnosisTime);
 
     system_ptr->set_logger(logger);
     system_ptr->set_plan_time_limit(vm["planTimeLimit"].as<int>());
     system_ptr->set_preprocess_time_limit(vm["preprocessTimeLimit"].as<int>());
-
-    system_ptr->set_num_tasks_reveal(read_param_json<int>(data, "numTasksReveal", 1));
 
     signal(SIGINT, sigint_handler);
 

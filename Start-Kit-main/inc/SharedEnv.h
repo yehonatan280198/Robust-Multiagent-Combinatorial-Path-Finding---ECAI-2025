@@ -2,6 +2,7 @@
 #include "States.h"
 #include "Grid.h"
 #include "nlohmann/json.hpp"
+#include "Tasks.h"
 
 
 class SharedEnvironment
@@ -14,9 +15,7 @@ public:
     std::vector<int> map;
     std::string file_storage_path;
 
-    // goal locations for each agent
-    // each task is a pair of <goal_loc, reveal_time>
-    vector< vector<pair<int, int> > > goal_locations;
+    vector< vector< tuple<int, int, int> > > goal_locations;
 
     int curr_timestep = 0;
     vector<State> curr_states;
@@ -27,6 +26,7 @@ public:
     double makeSpanForCurPlan;
     std::vector<int> curAgents;
     std::vector<int> lastTimeMove;
+    std::vector<Task> unfinishedTasks;
 
 
     SharedEnvironment(){}

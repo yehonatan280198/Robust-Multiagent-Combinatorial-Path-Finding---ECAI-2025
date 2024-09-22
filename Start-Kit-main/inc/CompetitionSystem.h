@@ -77,9 +77,6 @@ protected:
     vector<list<Action>> actual_movements;
     vector<list<Action>> planner_movements;
 
-    // tasks that haven't been finished but have been revealed to agents;
-    vector< deque<Task > > assigned_tasks;
-
     vector<list<std::tuple<int,int,std::string>>> events;
     std::vector<Task> unfinishedTasks;
     list<Task> all_tasks;

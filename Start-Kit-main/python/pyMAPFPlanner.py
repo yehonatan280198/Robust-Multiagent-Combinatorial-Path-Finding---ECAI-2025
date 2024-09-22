@@ -1,8 +1,11 @@
 import MAPF
-
-from typing import Dict, List, Tuple, Set
+from typing import Tuple, Set
 from queue import PriorityQueue
-import numpy as np
+
+import sys
+
+sys.path.append('/home/yonikid/Desktop/SimulatorAgents')
+from CBSS.rucCBSS import run_CBSS_MSMP
 
 
 # 0=Action.FW, 1=Action.CR, 2=Action.CCR, 3=Action.W
@@ -13,12 +16,18 @@ class pyMAPFPlanner:
             self.env = pyenv.env
         print("pyMAPFPlanner created!  python debug")
 
+        self.re = False
+
+        self.lastTimeMove = []
+
     def initialize(self, preprocess_time_limit: int):
         print("planner initialize done... python debug")
         return True
 
     def plan(self, time_limit):
-        return self.sample_priority_planner(time_limit)
+        pass
+        self.cbss_planner()
+        # return self.sample_priority_planner(time_limit)
 
     def getManhattanDistance(self, loc1: int, loc2: int):
         return abs(loc1 // self.env.cols - loc2 // self.env.cols) + abs(loc1 % self.env.cols - loc2 % self.env.cols)
@@ -27,7 +36,11 @@ class pyMAPFPlanner:
         return not (loc // self.env.cols >= self.env.rows or loc % self.env.cols >= self.env.cols or self.env.map[
             loc] == 1)
 
-    def getNeighbors(self, location: int, direction: int):
+    def getNeighbors(self, location: int, direction: int, currTime, currAgent):
+
+        if currTime + 1 - self.lastTimeMove[currAgent] < self.env.manufacturerDelay_FailureProbability[currAgent][0]:
+            return [(location, direction)]
+
         neighbors = []
 
         # forward
@@ -49,17 +62,18 @@ class pyMAPFPlanner:
 
         return neighbors
 
-    def space_time_plan(self, start: int, start_direct: int, goals, reservation: Set[Tuple[int, int, int]]):
+    def space_time_plan(self, start: int, start_direct: int, goals, reservation: Set[Tuple[int, int, int]], currAgent):
         allPath = []
-        for end, _ in goals:
+        time = self.env.curr_timestep
+        for end, _, _ in goals:
             print(start, start_direct, end)
             path = []
             open_list = PriorityQueue()
-            all_nodes = {}  # loc+dict, t
+            all_nodes = {}
             parent = {}
-            s = (start, start_direct, 0, self.getManhattanDistance(start, end))
+            s = (start, start_direct, time, self.getManhattanDistance(start, end))
             open_list.put((s[3], id(s), s))
-            parent[(start * 4 + start_direct, 0)] = None
+            parent[(start * 4 + start_direct, time)] = None
 
             while not open_list.empty():
                 _, _, curr = open_list.get()
@@ -70,6 +84,7 @@ class pyMAPFPlanner:
 
                 all_nodes[(curr_location * 4 + curr_direction, curr_g)] = curr
                 if curr_location == end:
+                    time = curr[2]
                     while True:
                         path.append((curr[0], curr[1]))
                         curr = parent[(curr[0] * 4 + curr[1], curr[2])]
@@ -80,8 +95,9 @@ class pyMAPFPlanner:
                     path.reverse()
                     break
 
-                neighbors = self.getNeighbors(curr_location, curr_direction)
+                neighbors = self.getNeighbors(curr_location, curr_direction, curr_g, currAgent)
 
+                move = False
                 for neighbor in neighbors:
                     neighbor_location, neighbor_direction = neighbor
 
@@ -91,22 +107,15 @@ class pyMAPFPlanner:
                     if (neighbor_location, curr_location, curr[2] + 1) in reservation:
                         continue
 
-                    neighbor_key = (neighbor_location * 4 +
-                                    neighbor_direction, curr[2] + 1)
+                    if neighbor_location != curr_location:
+                        move = True
 
-                    if neighbor_key in all_nodes:
-                        old = all_nodes[neighbor_key]
-                        if curr_g + 1 < old[2]:
-                            old = (old[0], old[1], curr_g + 1, old[3], old[4])
-                    else:
-                        next_node = (neighbor_location, neighbor_direction, curr_g + 1,
-                                     self.getManhattanDistance(neighbor_location, end))
+                    next_node = (neighbor_location, neighbor_direction, curr_g + 1, self.getManhattanDistance(neighbor_location, end))
+                    open_list.put((next_node[3] + next_node[2], id(next_node), next_node))
+                    parent[(neighbor_location * 4 + neighbor_direction, next_node[2])] = curr
 
-                        open_list.put(
-                            (next_node[3] + next_node[2], id(next_node), next_node))
-
-                        parent[(neighbor_location * 4 +
-                                neighbor_direction, next_node[2])] = curr
+                if move:
+                    self.lastTimeMove[currAgent] = curr_g + 1
 
             allPath.append(path)
             start, start_direct = path[-1][0], path[-1][1]
@@ -118,7 +127,7 @@ class pyMAPFPlanner:
         return allPath
 
     def sample_priority_planner(self, time_limit: int):
-
+        self.lastTimeMove = [timeMove for timeMove in self.env.lastTimeMove]
         actions = [MAPF.Action.W] * len(self.env.curr_states)
         reservation = set()  # loc1, loc2, t
         AllPathSize = []
@@ -139,14 +148,13 @@ class pyMAPFPlanner:
                 path = self.space_time_plan(
                     self.env.curr_states[i].location,
                     self.env.curr_states[i].orientation,
-                    # self.env.goal_locations[i][0][0],
                     self.env.goal_locations[i],
-                    reservation
+                    reservation,
+                    i
                 )
                 AllPathSize.append(self.env.observationDelay_TotalMoves[i][0] * len(path))
 
             if path:
-                print("current location:", path[0][0], "current direction:", path[0][1])
                 if path[0][0] != self.env.curr_states[i].location:
                     actions[i] = MAPF.Action.FW
                 elif path[0][1] != self.env.curr_states[i].orientation:
@@ -167,6 +175,23 @@ class pyMAPFPlanner:
 
         self.env.makeSpanForCurPlan = max(AllPathSize)
         return actions
+
+    def cbss_planner(self):
+        locations = [state.location for state in self.env.curr_states]
+        taskLocs = [task.location for task in self.env.unfinishedTasks]
+        delays = [delays[0] for delays in self.env.observationDelay_TotalMoves]
+        paths, makeSpan, assignGoals = run_CBSS_MSMP(self.env.rows, locations, taskLocs, delays)
+
+        print(assignGoals)
+        goal_locations = [[] for _ in range(5)]
+        for agent, goals in assignGoals.items():
+            for goal in goals:
+                for task in self.env.unfinishedTasks:
+                    if goal == task.location:
+                        goal_locations[agent].append((goal, self.env.curr_timestep, task.task_id))
+
+        self.env.goal_locations = goal_locations
+
 
 
 if __name__ == "__main__":

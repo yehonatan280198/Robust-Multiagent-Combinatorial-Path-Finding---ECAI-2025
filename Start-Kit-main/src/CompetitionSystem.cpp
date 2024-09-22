@@ -42,37 +42,30 @@ void BaseSystem::move(vector<Action>& actions, int timestep)
     for (int k = 0; k < num_of_agents; k++)
     {
         // Check if the agent has reached his next task
-        if (!assigned_tasks[k].empty() && curr_states[k].location == assigned_tasks[k].front().location)
+        if (!env->goal_locations[k].empty() && curr_states[k].location == std::get<0>(env->goal_locations[k].front()))
         {
-            Task task = assigned_tasks[k].front();
-            assigned_tasks[k].pop_front();
-            events[k].push_back(make_tuple(task.task_id, timestep,"finished"));
+            int id_of_finish_goal = std::get<2>(env->goal_locations[k].front());
+            env->goal_locations[k].erase(env->goal_locations[k].begin());
+            events[k].push_back(make_tuple(id_of_finish_goal, timestep,"finished"));
             num_of_task_finish++;
 
             // Delete the task from the unfinished tasks.
-            unfinishedTasks.erase(std::remove_if(unfinishedTasks.begin(), unfinishedTasks.end(), [&task](const Task& currTask) {
-                return currTask.task_id == task.task_id;
+            unfinishedTasks.erase(std::remove_if(unfinishedTasks.begin(), unfinishedTasks.end(), [id_of_finish_goal](const Task& currTask) {
+                return currTask.task_id == id_of_finish_goal;
             }), unfinishedTasks.end());
 
         }
         paths[k].push_back(curr_states[k]);
         actual_movements[k].push_back(actions[k]);
+        env->unfinishedTasks = unfinishedTasks;
     }
 }
 
 
 void BaseSystem::sync_shared_env() {
 
-    if (!started){
-        env->goal_locations.resize(num_of_agents);
-        for (size_t i = 0; i < num_of_agents; i++){
-            env->goal_locations[i].clear();
-            for (auto& task: assigned_tasks[i]){
-                env->goal_locations[i].push_back({task.location, task.t_assigned });
-            }
-        }
+    if (!started)
         env->curr_states = curr_states;
-    }
     env->curr_timestep = timestep;
 }
 
@@ -173,10 +166,7 @@ void BaseSystem::simulate(int simulation_time)
         }
 
         // What is each agent's next step
-        auto start = std::chrono::steady_clock::now();
         vector<Action> actions = plan();
-        auto end = std::chrono::steady_clock::now();
-        planner_times.push_back(std::chrono::duration<double>(end-start).count());
 
         timestep++;
         for (int a = 0; a < num_of_agents; a++)
@@ -202,17 +192,16 @@ void BaseSystem::initialize()
     env->map = map.map;
     env->timeToDiagnosis = timeToDiagnosis;
     env->manufacturerDelay_FailureProbability = manufacturerDelay_FailureProbability;
+    env->unfinishedTasks = unfinishedTasks;
+    env->goal_locations.resize(num_of_agents);
 
     for (size_t i = 0; i < manufacturerDelay_FailureProbability.size(); ++i) {
         env->observationDelay_TotalMoves.push_back(std::make_pair(manufacturerDelay_FailureProbability[i].first, 0));
     }
 
-    // bool succ = load_records(); // continue simulating from the records
     timestep = 0;
     curr_states = starts;
-    assigned_tasks.resize(num_of_agents);
 
-    //planner initilise before knowing the first goals
     bool planner_initialize_success= planner_initialize();
     
     log_preprocessing(planner_initialize_success);
@@ -416,11 +405,6 @@ void BaseSystem::saveResults(const string &fileName, int screen)
         }
         js["plannerPaths"] = ppaths;
 
-        json planning_times = json::array();
-        for (double time: planner_times)
-            planning_times.push_back(time);
-        js["plannerTimes"] = planning_times;
-
         // Save errors
         json errors = json::array();
         for (auto error: model->errors)
@@ -484,14 +468,14 @@ void AllocationByMakespan::update_tasks(std::vector<int>& currentAgents)
 {
     // Unassign all tasks
     for (int k = 0; k < env->num_of_agents; k++)
-        assigned_tasks[k].clear();
+        env->goal_locations[k].clear();
 
     std::map<int, int> loc_of_agents;
     std::vector<std::vector<double>> distancesMatrix(currentAgents.size(), std::vector<double>(unfinishedTasks.size()));
 
     // Save the initial location of each agent
     for (int k = 0; k < currentAgents.size(); k++)
-        loc_of_agents[currentAgents[k]] = starts[currentAgents[k]].location;
+        loc_of_agents[currentAgents[k]] = curr_states[currentAgents[k]].location;
 
     // Save each agent's distance from each task
     for (int i = 0; i < currentAgents.size(); ++i) {
@@ -517,12 +501,11 @@ void AllocationByMakespan::update_tasks(std::vector<int>& currentAgents)
                 }
             }
         }
-
         // Assign the task to the agent
         Task task = unfinishedTasks[minAgent_Task.second];
         task.t_assigned = timestep;
         task.agent_assigned = currentAgents[minAgent_Task.first];
-        assigned_tasks[currentAgents[minAgent_Task.first]].push_back(task);
+        env->goal_locations[currentAgents[minAgent_Task.first]].push_back(std::make_tuple(task.location, timestep, task.task_id));
         events[currentAgents[minAgent_Task.first]].push_back(std::make_tuple(task.task_id, timestep, "assigned"));
 
         // Update the agent's location to the task's location

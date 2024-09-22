@@ -48,7 +48,7 @@ void MAPFPlanner::plan(int time_limit,vector<Action> & actions)
         {
             path = single_agent_plan(env->curr_states[i].location,
                                     env->curr_states[i].orientation,
-                                    env->goal_locations[i].front().first);
+                                    std::get<0>(env->goal_locations[i].front()));
         }
         if (path.front().first != env->curr_states[i].location)
         {

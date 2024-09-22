@@ -52,7 +52,7 @@ public:
         return env->file_storage_path;
     }
     
-    std::vector<std::vector<std::pair<int,int>>>get_goal_locations(){
+    vector<vector<std::tuple<int, int, int>>>get_goal_locations(){
         return env->goal_locations;
     }
 
