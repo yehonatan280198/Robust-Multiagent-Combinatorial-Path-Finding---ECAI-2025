@@ -19,6 +19,8 @@ public:
     // return next states for all agents
     virtual void plan(int time_limit, std::vector<Action> & plan);
 
+    virtual void updateTasks(std::vector<int>& currentAgents);
+
     // Start kit dummy implementation
     std::list<pair<int,int>>single_agent_plan(int start,int start_direct, int end);
     int getManhattanDistance(int loc1, int loc2);

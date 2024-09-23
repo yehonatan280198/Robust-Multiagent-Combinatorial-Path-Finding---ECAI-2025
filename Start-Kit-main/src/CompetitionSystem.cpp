@@ -208,6 +208,8 @@ void BaseSystem::initialize()
     if (!planner_initialize_success)
         _exit(124);
 
+    sync_shared_env();
+
     update_tasks(env->curAgents);
 
     sync_shared_env();
@@ -470,63 +472,74 @@ void AllocationByMakespan::update_tasks(std::vector<int>& currentAgents)
     for (int k = 0; k < env->num_of_agents; k++)
         env->goal_locations[k].clear();
 
-    std::map<int, int> loc_of_agents;
-    std::vector<std::vector<double>> distancesMatrix(currentAgents.size(), std::vector<double>(unfinishedTasks.size()));
+    planner->updateTasks(env->curAgents);
 
-    // Save the initial location of each agent
-    for (int k = 0; k < currentAgents.size(); k++)
-        loc_of_agents[currentAgents[k]] = curr_states[currentAgents[k]].location;
-
-    // Save each agent's distance from each task
-    for (int i = 0; i < currentAgents.size(); ++i) {
-        for (int j = 0; j < unfinishedTasks.size(); ++j) {
-            std::pair<int, int> agentLoc = {loc_of_agents[currentAgents[i]] / env->cols, loc_of_agents[currentAgents[i]] % env->cols}; // (Row, Col)
-            std::pair<int, int> taskLoc = {unfinishedTasks[j].location / env->cols, unfinishedTasks[j].location % env->cols}; // (Row, Col)
-            distancesMatrix[i][j] = env->observationDelay_TotalMoves[i].first * (std::abs(agentLoc.first - taskLoc.first) + std::abs(agentLoc.second - taskLoc.second));
+    for (int i = 0; i < env->goal_locations.size(); ++i) {
+        for (int j = 0; j < env->goal_locations[i].size(); ++j) {
+            std::tuple<int, int, int> current_tuple = env->goal_locations[i][j];
+            int curr_timestep = std::get<1>(current_tuple);
+            int task_id = std::get<2>(current_tuple);
+            events[i].push_back(std::make_tuple(task_id, curr_timestep, "assigned"));
         }
     }
 
-    // Check if all tasks have been assigned
-    while (std::any_of(distancesMatrix[0].begin(), distancesMatrix[0].end(),[](double cell) { return cell != std::numeric_limits<double>::infinity(); })) {
-
-        double min_dist = std::numeric_limits<double>::infinity();
-        std::pair<int, int> minAgent_Task = {-1,-1};
-
-        // Find the minimum distance between an agent and a task
-        for (int i = 0; i < currentAgents.size(); ++i) {
-            for (int j = 0; j < unfinishedTasks.size(); ++j) {
-                if (distancesMatrix[i][j] < min_dist) {
-                    min_dist = distancesMatrix[i][j];
-                    minAgent_Task = {i,j};
-                }
-            }
-        }
-        // Assign the task to the agent
-        Task task = unfinishedTasks[minAgent_Task.second];
-        task.t_assigned = timestep;
-        task.agent_assigned = currentAgents[minAgent_Task.first];
-        env->goal_locations[currentAgents[minAgent_Task.first]].push_back(std::make_tuple(task.location, timestep, task.task_id));
-        events[currentAgents[minAgent_Task.first]].push_back(std::make_tuple(task.task_id, timestep, "assigned"));
-
-        // Update the agent's location to the task's location
-        loc_of_agents[currentAgents[minAgent_Task.first]] = task.location;
-        std::pair<int, int> agentNewLoc = {task.location / env->cols, task.location % env->cols}; // (Row, Col)
-        double distance_until = distancesMatrix[minAgent_Task.first][minAgent_Task.second];
-
-        // Update the distances
-        for (int i = 0; i < currentAgents.size(); ++i) {
-            for (int j = 0; j < unfinishedTasks.size(); ++j) {
-                std::pair<int, int> taskLoc = {unfinishedTasks[j].location / env->cols, unfinishedTasks[j].location % env->cols}; // (Row, Col)
-
-                // If the task has already been assigned
-                if (j == minAgent_Task.second)
-                    distancesMatrix[i][j] = std::numeric_limits<double>::infinity();
-                // Update the agent's distance from the other tasks
-                else if (i == minAgent_Task.first && distancesMatrix[i][j] != std::numeric_limits<double>::infinity())
-                    distancesMatrix[i][j] = distance_until + env->observationDelay_TotalMoves[i].first * (std::abs(agentNewLoc.first - taskLoc.first) + std::abs(agentNewLoc.second - taskLoc.second));
-            }
-        }
-    }
+//    std::map<int, int> loc_of_agents;
+//    std::vector<std::vector<double>> distancesMatrix(currentAgents.size(), std::vector<double>(unfinishedTasks.size()));
+//
+//    // Save the initial location of each agent
+//    for (int k = 0; k < currentAgents.size(); k++)
+//        loc_of_agents[currentAgents[k]] = curr_states[currentAgents[k]].location;
+//
+//    // Save each agent's distance from each task
+//    for (int i = 0; i < currentAgents.size(); ++i) {
+//        for (int j = 0; j < unfinishedTasks.size(); ++j) {
+//            std::pair<int, int> agentLoc = {loc_of_agents[currentAgents[i]] / env->cols, loc_of_agents[currentAgents[i]] % env->cols}; // (Row, Col)
+//            std::pair<int, int> taskLoc = {unfinishedTasks[j].location / env->cols, unfinishedTasks[j].location % env->cols}; // (Row, Col)
+//            distancesMatrix[i][j] = env->observationDelay_TotalMoves[i].first * (std::abs(agentLoc.first - taskLoc.first) + std::abs(agentLoc.second - taskLoc.second));
+//        }
+//    }
+//
+//    // Check if all tasks have been assigned
+//    while (std::any_of(distancesMatrix[0].begin(), distancesMatrix[0].end(),[](double cell) { return cell != std::numeric_limits<double>::infinity(); })) {
+//
+//        double min_dist = std::numeric_limits<double>::infinity();
+//        std::pair<int, int> minAgent_Task = {-1,-1};
+//
+//        // Find the minimum distance between an agent and a task
+//        for (int i = 0; i < currentAgents.size(); ++i) {
+//            for (int j = 0; j < unfinishedTasks.size(); ++j) {
+//                if (distancesMatrix[i][j] < min_dist) {
+//                    min_dist = distancesMatrix[i][j];
+//                    minAgent_Task = {i,j};
+//                }
+//            }
+//        }
+//        // Assign the task to the agent
+//        Task task = unfinishedTasks[minAgent_Task.second];
+//        task.t_assigned = timestep;
+//        task.agent_assigned = currentAgents[minAgent_Task.first];
+//        env->goal_locations[currentAgents[minAgent_Task.first]].push_back(std::make_tuple(task.location, timestep, task.task_id));
+//        events[currentAgents[minAgent_Task.first]].push_back(std::make_tuple(task.task_id, timestep, "assigned"));
+//
+//        // Update the agent's location to the task's location
+//        loc_of_agents[currentAgents[minAgent_Task.first]] = task.location;
+//        std::pair<int, int> agentNewLoc = {task.location / env->cols, task.location % env->cols}; // (Row, Col)
+//        double distance_until = distancesMatrix[minAgent_Task.first][minAgent_Task.second];
+//
+//        // Update the distances
+//        for (int i = 0; i < currentAgents.size(); ++i) {
+//            for (int j = 0; j < unfinishedTasks.size(); ++j) {
+//                std::pair<int, int> taskLoc = {unfinishedTasks[j].location / env->cols, unfinishedTasks[j].location % env->cols}; // (Row, Col)
+//
+//                // If the task has already been assigned
+//                if (j == minAgent_Task.second)
+//                    distancesMatrix[i][j] = std::numeric_limits<double>::infinity();
+//                // Update the agent's distance from the other tasks
+//                else if (i == minAgent_Task.first && distancesMatrix[i][j] != std::numeric_limits<double>::infinity())
+//                    distancesMatrix[i][j] = distance_until + env->observationDelay_TotalMoves[i].first * (std::abs(agentNewLoc.first - taskLoc.first) + std::abs(agentNewLoc.second - taskLoc.second));
+//            }
+//        }
+//    }
 
     sync_shared_env();
     plan();

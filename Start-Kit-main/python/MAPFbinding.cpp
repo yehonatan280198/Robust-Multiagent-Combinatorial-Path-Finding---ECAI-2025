@@ -80,9 +80,9 @@ PYBIND11_MODULE(MAPF, m ){
     pybind11::class_<Task>(m, "Task")
         .def_readonly("task_id",&Task::task_id)
         .def_readonly("location",&Task::location)
-        .def_readonly("t_assigned",&Task::t_assigned)
+        .def_readwrite("t_assigned",&Task::t_assigned)
         .def_readonly("t_completed",&Task::t_completed)
-        .def_readonly("agent_assigned",&Task::agent_assigned);
+        .def_readwrite("agent_assigned",&Task::agent_assigned);
 
     // pybind11::class_<MAPFPlanner>(m,"MAPFPlanner")
     //     .def(pybind11::init<>())

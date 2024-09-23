@@ -74,4 +74,9 @@ void pyMAPFPlanner::plan(int time_limit,std::vector<Action> &plan){
  
 }
 
+void pyMAPFPlanner::updateTasks(std::vector<int>& currentAgents){
+    pybind11::gil_scoped_release release;
+    pybind11::gil_scoped_acquire acquire;
+    py_planner.attr("updateTasks")(currentAgents);
+}
 

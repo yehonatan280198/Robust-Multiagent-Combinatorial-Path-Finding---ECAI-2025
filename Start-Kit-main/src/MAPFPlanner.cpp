@@ -178,3 +178,6 @@ list<pair<int,int>> MAPFPlanner::getNeighbors(int location,int direction)
     neighbors.emplace_back(make_pair(location,direction)); //wait
     return neighbors;
 }
+
+void MAPFPlanner::updateTasks(std::vector<int>& currentAgents){
+}

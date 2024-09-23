@@ -137,42 +137,31 @@ def getTargetGraph(grids,Vo,Vt,delays):
   V = Vo + Vt
   spMat = np.zeros((nn,nn))
 
-  for i in range(nn):
-    min_value, min_k = min((spMat[k, i], k) for k in range(N))
-
+  for i in range(N):
     for j in range(nn):
+      spMat[i,j] = (len(gridAstar(grids,V[i],V[j])) - 1) * delays[i]
 
-      if i < N:
-        spMat[i,j] = (len(gridAstar(grids,V[i],V[j])) - 1) * delays[i]
+  rows = list(range(N))
+  cols = list(range(N,nn))
+
+  for i in range(N,nn):
+    Irow, Icol, Mval = 0, 0, math.inf
+    for r in rows:
+      for c in cols:
+        if spMat[r,c] < Mval and spMat[r,c] != 0:
+          Irow, Icol, Mval = r, c, spMat[r,c]
+
+    for k in range(nn):
+      if (len(gridAstar(grids,V[Icol],V[k])) - 1) == 0:
+        spMat[Icol, k] = 0
       else:
-        spMat[i, j] = 0 if (len(gridAstar(grids,V[i],V[j])) - 1) == 0 else (min_value + (len(gridAstar(grids,V[i],V[j])) - 1) * max(delays))
+        spMat[Icol, k] = Mval + (len(gridAstar(grids,V[Icol],V[k])) - 1) * max(delays)
+
+    rows.remove(Irow)
+    rows.append(Icol)
+    cols.remove(Icol)
 
   return spMat
-
-  # for i in range(N):
-  #   for j in range(nn):
-  #     spMat[i,j] = (len(gridAstar(grids,V[i],V[j])) - 1) * delays[i]
-  #
-  # rows = list(range(N))
-  # cols = list(range(N,nn))
-  # for i in range(N,nn):
-  #   Irow, Icol, Mval = 0,0,math.inf
-  #   for r in rows:
-  #     for c in cols:
-  #       if spMat[r,c] < Mval and spMat[r,c] != 0:
-  #         Irow, Icol, Mval = r,c,spMat[r,c]
-  #
-  #   print(Irow, Icol, Mval)
-  #   for k in range(nn):
-  #     spMat[Icol, k] = 0 if (len(gridAstar(grids,V[Icol],V[k])) - 1) == 0 else (Mval + (len(gridAstar(grids,V[Icol],V[k])) - 1))
-  #
-  #   rows.remove(Irow)
-  #   rows.append(Icol)
-  #   cols.remove(Icol)
-  #
-  # return spMat
-
-
 
 def ItvOverlap(ita,itb,jta,jtb):
   """

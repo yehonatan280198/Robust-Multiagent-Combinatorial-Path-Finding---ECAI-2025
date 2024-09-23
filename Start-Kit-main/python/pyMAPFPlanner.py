@@ -26,8 +26,8 @@ class pyMAPFPlanner:
 
     def plan(self, time_limit):
         pass
-        self.cbss_planner()
-        # return self.sample_priority_planner(time_limit)
+        # self.cbss_planner()
+        return self.sample_priority_planner(time_limit)
 
     def getManhattanDistance(self, loc1: int, loc2: int):
         return abs(loc1 // self.env.cols - loc2 // self.env.cols) + abs(loc1 % self.env.cols - loc2 % self.env.cols)
@@ -176,8 +176,24 @@ class pyMAPFPlanner:
         self.env.makeSpanForCurPlan = max(AllPathSize)
         return actions
 
-    def cbss_planner(self):
-        locations = [state.location for state in self.env.curr_states]
+    # def cbss_planner(self):
+    #     locations = [state.location for state in self.env.curr_states]
+    #     taskLocs = [task.location for task in self.env.unfinishedTasks]
+    #     delays = [delays[0] for delays in self.env.observationDelay_TotalMoves]
+    #     paths, makeSpan, assignGoals = run_CBSS_MSMP(self.env.rows, locations, taskLocs, delays)
+    #
+    #     print(assignGoals)
+    #     goal_locations = [[] for _ in range(5)]
+    #     for agent, goals in assignGoals.items():
+    #         for goal in goals:
+    #             for task in self.env.unfinishedTasks:
+    #                 if goal == task.location:
+    #                     goal_locations[agent].append((goal, self.env.curr_timestep, task.task_id))
+    #
+    #     self.env.goal_locations = goal_locations
+
+    def updateTasks(self, currentAgents):
+        locations = [self.env.curr_states[agent].location for agent in currentAgents]
         taskLocs = [task.location for task in self.env.unfinishedTasks]
         delays = [delays[0] for delays in self.env.observationDelay_TotalMoves]
         paths, makeSpan, assignGoals = run_CBSS_MSMP(self.env.rows, locations, taskLocs, delays)
@@ -188,11 +204,11 @@ class pyMAPFPlanner:
             for goal in goals:
                 for task in self.env.unfinishedTasks:
                     if goal == task.location:
-                        goal_locations[agent].append((goal, self.env.curr_timestep, task.task_id))
+                        goal_locations[currentAgents[agent]].append((goal, self.env.curr_timestep, task.task_id))
+                        task.t_assigned = self.env.curr_timestep
+                        task.agent_assigned = currentAgents[agent]
 
         self.env.goal_locations = goal_locations
-
-
 
 if __name__ == "__main__":
     test_planner = pyMAPFPlanner()
