@@ -177,7 +177,7 @@ class CbssNode:
   High level search tree node
   """
 
-    def __init__(self, id0, sol=CbsSol(), cstr=CbsConstraint(-1, -1, -1, -1, -1, -1), c=0, parent=-1):
+    def __init__(self, id0, sol=None, cstr=None, c=0, parent=-1):
         """
     id = id of this high level CT node
     sol = an object of type CCbsSol.
@@ -187,12 +187,13 @@ class CbssNode:
     parent = id of the parent node of this node.
     """
         self.id = id0
-        self.sol = sol
-        self.cstr = cstr
-        self.cost = c
+        self.sol = CbsSol()
+        self.cstr = CbsConstraint(-1, -1, -1, -1, -1, -1)
+        self.cost = 0
         self.parent = -1  # root node
         self.root_id = -1
         return
+
 
     def __str__(self):
         str1 = "{id:" + str(self.id) + ",cost:" + str(self.cost) + ",parent:" + str(self.parent)
@@ -351,7 +352,8 @@ class CbssFramework:
         self.nodes[nid].root_id = nid                       # Set the root ID of the current node to its own ID
         ### Init sequencing related ###
         if not self.next_seq:                                                                           # Check if there is no next sequence available
-            if (nid == 1):  # init                                                                      # Initial case: the first node is being generated
+            if (nid == 1):  # init
+                # Initial case: the first node is being generated
                 tlimit = self.time_limit - (time.perf_counter() - self.tstart)                          # Calculate remaining time limit
                 flag = self.kbtsp.ComputeNextBest(tlimit, self.total_num_nodes)                         # Compute the next best sequence within the time limit
                 if not flag:                                                                            # Check if no feasible sequence was found or if time ran out

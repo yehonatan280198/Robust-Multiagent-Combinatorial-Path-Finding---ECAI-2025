@@ -68,7 +68,6 @@ class KBestMTSP:
     self.tsp.InitMat()
     tnow = time.perf_counter()
     flag, lb, seqs_dict, cost_dict = self.tsp.Solve()
-    print(seqs_dict)
     if flag == False:
       print("[ERROR] infeasible case? KBestTSP._Init fails to get a feasible joint sequence!")
     dt = time.perf_counter() - tnow

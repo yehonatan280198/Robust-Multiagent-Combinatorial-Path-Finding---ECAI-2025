@@ -16,8 +16,6 @@ class pyMAPFPlanner:
             self.env = pyenv.env
         print("pyMAPFPlanner created!  python debug")
 
-        self.re = False
-
         self.lastTimeMove = []
 
     def initialize(self, preprocess_time_limit: int):
@@ -176,26 +174,10 @@ class pyMAPFPlanner:
         self.env.makeSpanForCurPlan = max(AllPathSize)
         return actions
 
-    # def cbss_planner(self):
-    #     locations = [state.location for state in self.env.curr_states]
-    #     taskLocs = [task.location for task in self.env.unfinishedTasks]
-    #     delays = [delays[0] for delays in self.env.observationDelay_TotalMoves]
-    #     paths, makeSpan, assignGoals = run_CBSS_MSMP(self.env.rows, locations, taskLocs, delays)
-    #
-    #     print(assignGoals)
-    #     goal_locations = [[] for _ in range(5)]
-    #     for agent, goals in assignGoals.items():
-    #         for goal in goals:
-    #             for task in self.env.unfinishedTasks:
-    #                 if goal == task.location:
-    #                     goal_locations[agent].append((goal, self.env.curr_timestep, task.task_id))
-    #
-    #     self.env.goal_locations = goal_locations
-
     def updateTasks(self, currentAgents):
         locations = [self.env.curr_states[agent].location for agent in currentAgents]
         taskLocs = [task.location for task in self.env.unfinishedTasks]
-        delays = [delays[0] for delays in self.env.observationDelay_TotalMoves]
+        delays = [self.env.observationDelay_TotalMoves[agent][0] for agent in currentAgents]
         paths, makeSpan, assignGoals = run_CBSS_MSMP(self.env.rows, locations, taskLocs, delays)
 
         print(assignGoals)
@@ -209,6 +191,7 @@ class pyMAPFPlanner:
                         task.agent_assigned = currentAgents[agent]
 
         self.env.goal_locations = goal_locations
+
 
 if __name__ == "__main__":
     test_planner = pyMAPFPlanner()

@@ -43,8 +43,6 @@ void pyMAPFPlanner::initialize(int preprocess_time_limit){
     pybind11::gil_scoped_acquire acquire;
     std::cout<<"pyMAPFPlanner begin to initialize"<<std::endl;
     py_planner.attr("initialize")(preprocess_time_limit);
-
-    // env=py_planner.attr("env").cast<SharedEnvironment*>();
 }
 
 
@@ -57,21 +55,14 @@ void pyMAPFPlanner::plan(int time_limit,std::vector<Action> &plan){
 
     try{
         plan=action_object.cast<std::vector<Action>>();
-        // assert(plan.empty()==false);
-        // return actions;
     }   
     catch(pybind11::cast_error e){
         plan.clear();
         std::vector<int> tmp_action=action_object.cast<std::vector<int>>();
-        // std::vector<Action> actions;
         for(auto &ai:tmp_action){
             plan.push_back(static_cast<Action>(ai));
         }
-        // assert(actions.empty()==false);
-        // return actions;
     }
-    // pybind11::gil_scoped_release release;
- 
 }
 
 void pyMAPFPlanner::updateTasks(std::vector<int>& currentAgents){
