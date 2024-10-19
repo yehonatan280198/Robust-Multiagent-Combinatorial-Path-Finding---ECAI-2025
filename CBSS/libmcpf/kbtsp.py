@@ -75,7 +75,7 @@ class KBestMTSP:
     self.n_tsp_time = self.n_tsp_time + dt # this is total time.
 
     ### generate a restricted TSP instance
-    cval = np.sum(list(cost_dict.values()))
+    cval = max(list(cost_dict.values()))
     rtsp = RestrictedTSP(set(), set())
     rtsp.sol = seqs_dict
     rtsp.cost_dict = cost_dict
@@ -114,7 +114,7 @@ class KBestMTSP:
     dt = time.perf_counter() - tnow
     self.n_tsp_call = self.n_tsp_call + 1
     self.n_tsp_time = self.n_tsp_time + dt # this is total time.
-    cval = np.sum(list(cost_dict.values()))
+    cval = max(list(cost_dict.values()))
 
     ### verify against Ie, Oe.
     flag = self._VerifySol(temp_tsp, rtsp.setI, rtsp.setO, seqs_dict)

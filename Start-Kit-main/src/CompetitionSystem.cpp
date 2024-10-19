@@ -499,12 +499,12 @@ void AllocationByMakespan::Find_Who_To_Repair_And_The_Remain_Agents(){
     std::vector<int> potential_agents;
 
     // Create all possible combinations of remaining hazards
-    int numCombinations = 1 << remain_agents.size();
-    for (int i=0; i<numCombinations; ++i){
+    int numCombinations = pow(2,remain_agents.size());
+    for (int i = 0; i < numCombinations; ++i) {
         std::vector<int> combination;
-        for (int j = 0; j < num_of_agents; ++j) {
+        for (int j = 0; j < remain_agents.size(); ++j) {
             if (i & (1 << j))
-                combination.push_back(j);
+                combination.push_back(remain_agents[j]);
         }
 
         if (combination.size() == 0)

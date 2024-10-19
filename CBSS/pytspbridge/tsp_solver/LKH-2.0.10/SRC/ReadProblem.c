@@ -441,8 +441,8 @@ static void CheckSpecificationPart()
 {
     if (ProblemType == -1)
         eprintf("TYPE is missing");
-    if (Dimension < 3)
-        eprintf("DIMENSION < 3 or not specified");
+    if (Dimension < 2)
+        eprintf("DIMENSION < 2 or not specified");
     if (WeightType == -1 && ProblemType != ATSP && ProblemType != HCP &&
         ProblemType != HPP && !EdgeWeightType)
         eprintf("EDGE_WEIGHT_TYPE is missing");

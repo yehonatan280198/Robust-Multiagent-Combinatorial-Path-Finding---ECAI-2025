@@ -22,7 +22,7 @@ def run_CBSS_MSMP(size_grid, locations, taskLocs, delays):
 
     configs = dict()
     configs["problem_str"] = "msmp"
-    configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
+    configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-3.0.11/LKH"
     configs["time_limit"] = 600
     configs["eps"] = 0.0
     res_dict = cbss_msmp.RunCbssMSMP(grids, starts, targets, configs, delays)

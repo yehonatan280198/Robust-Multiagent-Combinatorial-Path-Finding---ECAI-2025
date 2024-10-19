@@ -1,13 +1,8 @@
 {
     "actionModel": "MAPF_T",
     "AllValid": "Yes",
-    "teamSize": 5,
+    "teamSize": 2,
     "start": [
-        [
-            0,
-            2,
-            "E"
-        ],
         [
             0,
             4,
@@ -17,34 +12,18 @@
             0,
             6,
             "E"
-        ],
-        [
-            0,
-            8,
-            "E"
-        ],
-        [
-            0,
-            10,
-            "E"
         ]
     ],
-    "numTaskFinished": 5,
-    "sumOfCost": 39,
-    "makespan": 14,
+    "numTaskFinished": 2,
+    "sumOfCost": 22,
+    "makespan": 11,
     "actualPaths": [
-        "R,F,F,F,F,F,F,F,F,F,F,C,F,F",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "R,F,F,F,F,F,F,F,F,F,F,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "R,F,F,F,F,F,F,F,F,F,F,R,F,F"
+        "R,F,F,F,F,F,F,F,F,F,F",
+        "R,F,F,F,F,F,F,F,F,F,F"
     ],
     "plannerPaths": [
-        "R,F,F,F,F,F,F,F,F,F,F,C,F,F",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "R,F,F,F,F,F,F,F,F,F,F,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "R,F,F,F,F,F,F,F,F,F,F,R,F,F"
+        "R,F,F,F,F,F,F,F,F,F,F",
+        "R,F,F,F,F,F,F,F,F,F,F"
     ],
     "errors": [],
     "events": [
@@ -55,54 +34,20 @@
                 "assigned"
             ],
             [
-                2,
-                0,
-                "assigned"
-            ],
-            [
                 1,
                 11,
                 "finished"
+            ]
+        ],
+        [
+            [
+                2,
+                0,
+                "assigned"
             ],
             [
                 2,
-                14,
-                "finished"
-            ]
-        ],
-        [],
-        [
-            [
-                3,
-                0,
-                "assigned"
-            ],
-            [
-                3,
                 11,
-                "finished"
-            ]
-        ],
-        [],
-        [
-            [
-                5,
-                0,
-                "assigned"
-            ],
-            [
-                4,
-                0,
-                "assigned"
-            ],
-            [
-                5,
-                11,
-                "finished"
-            ],
-            [
-                4,
-                14,
                 "finished"
             ]
         ]
@@ -111,27 +56,12 @@
         [
             0,
             10,
-            2
+            4
         ],
         [
             1,
             10,
-            4
-        ],
-        [
-            2,
-            10,
             6
-        ],
-        [
-            3,
-            10,
-            8
-        ],
-        [
-            4,
-            10,
-            10
         ]
     ]
 }
