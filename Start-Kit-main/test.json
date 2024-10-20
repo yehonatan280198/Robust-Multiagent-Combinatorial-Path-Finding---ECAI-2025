@@ -5,28 +5,29 @@
     "start": [
         [
             0,
-            4,
+            2,
             "E"
         ],
         [
             0,
-            6,
+            10,
             "E"
         ]
     ],
-    "numTaskFinished": 2,
-    "sumOfCost": 22,
-    "makespan": 11,
+    "numTaskFinished": 4,
+    "sumOfCost": 12,
+    "makespan": 12,
     "actualPaths": [
-        "R,F,F,F,F,F,F,F,F,F,F",
-        "R,F,F,F,F,F,F,F,F,F,F"
+        "T,T,T,T,T,T,T,T,T,T,T,T",
+        "R,F,F,R,F,F,F,C,F,F,F,F"
     ],
     "plannerPaths": [
-        "R,F,F,F,F,F,F,F,F,F,F",
-        "R,F,F,F,F,F,F,F,F,F,F"
+        "T,T,T,T,T,T,T,T,T,T,T,T",
+        "R,F,F,R,F,F,F,C,F,F,F,F"
     ],
     "errors": [],
     "events": [
+        [],
         [
             [
                 1,
@@ -35,19 +36,37 @@
             ],
             [
                 1,
-                11,
+                0,
+                "assigned"
+            ],
+            [
+                2,
+                0,
+                "assigned"
+            ],
+            [
+                3,
+                0,
+                "assigned"
+            ],
+            [
+                1,
+                7,
                 "finished"
-            ]
-        ],
-        [
+            ],
             [
-                2,
-                0,
-                "assigned"
+                1,
+                8,
+                "finished"
             ],
             [
                 2,
-                11,
+                10,
+                "finished"
+            ],
+            [
+                3,
+                12,
                 "finished"
             ]
         ]
@@ -55,13 +74,18 @@
     "tasks": [
         [
             0,
-            10,
-            4
+            2,
+            7
         ],
         [
             1,
-            10,
-            6
+            4,
+            7
+        ],
+        [
+            2,
+            6,
+            7
         ]
     ]
 }
