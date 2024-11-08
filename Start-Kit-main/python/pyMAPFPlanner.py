@@ -4,11 +4,16 @@ from queue import PriorityQueue
 
 import sys
 
+
 sys.path.append('/home/yonikid/Desktop/SimulatorAgents')
 from CBSS.rucCBSS import run_CBSS_MSMP
 from MsStar.Run_MsStar import MsStar
+from DMSstar.Run_DMSstar import DMSstar
+
 
 # 0=Action.FW, 1=Action.CR, 2=Action.CCR, 3=Action.W
+
+
 
 class pyMAPFPlanner:
     def __init__(self, pyenv=None):
@@ -197,21 +202,28 @@ class pyMAPFPlanner:
     def updateTasks(self, currentAgents):
         locations = [(self.env.curr_states[agent].location, self.env.curr_states[agent].orientation) for agent in currentAgents]
         taskLocs = [task.location for task in self.env.unfinishedTasks]
-        ms = MsStar(locations, taskLocs, self.env.cols, self.env.rows)
-        self.paths = ms.run()
-        print(self.paths)
+        delays = {i: self.env.observationDelay_TotalMoves[agent][0] for i, agent in enumerate(currentAgents)}
+        dms = DMSstar(locations, taskLocs, self.env.cols, self.env.rows, delays)
 
-        goal_locations = [[] for _ in range(5)]
-        for agent, path in enumerate(self.paths):
-            loc_path, _ = zip(*path)
-            for loc in loc_path:
-                if loc in taskLocs:
-                    task = self.env.unfinishedTasks[taskLocs.index(loc)]
-                    goal_locations[currentAgents[agent]].append((task.location, self.env.curr_timestep, task.task_id))
-                    task.t_assigned = self.env.curr_timestep
-                    task.agent_assigned = currentAgents[agent]
-
-        self.env.goal_locations = goal_locations
+        # locations = [(agent, (self.env.curr_states[agent].location, self.env.curr_states[agent].orientation)) for agent
+        #              in currentAgents]
+        # taskLocs = [task.location for task in self.env.unfinishedTasks]
+        # delays = {agent: self.env.observationDelay_TotalMoves[agent][0] for agent in currentAgents}
+        # ms = MsStar(locations, taskLocs, self.env.cols, self.env.rows)
+        # self.paths = ms.run()
+        # print(self.paths)
+        #
+        # goal_locations = [[] for _ in range(5)]
+        # for agent, path in enumerate(self.paths):
+        #     loc_path, _ = zip(*path)
+        #     for loc in loc_path:
+        #         if loc in taskLocs:
+        #             task = self.env.unfinishedTasks[taskLocs.index(loc)]
+        #             goal_locations[currentAgents[agent]].append((task.location, self.env.curr_timestep, task.task_id))
+        #             task.t_assigned = self.env.curr_timestep
+        #             task.agent_assigned = currentAgents[agent]
+        #
+        # self.env.goal_locations = goal_locations
 
         #
         # for task in self.env.unfinishedTasks:
@@ -222,7 +234,6 @@ class pyMAPFPlanner:
         #             task.t_assigned = self.env.curr_timestep
         #             task.agent_assigned = currentAgents[agent]
         # self.env.goal_locations = goal_locations
-
 
         # locations = [self.env.curr_states[agent].location for agent in currentAgents]
         # taskLocs = [task.location for task in self.env.unfinishedTasks]
@@ -240,6 +251,7 @@ class pyMAPFPlanner:
         #                 task.agent_assigned = currentAgents[agent]
         #
         # self.env.goal_locations = goal_locations
+
 
 if __name__ == "__main__":
     test_planner = pyMAPFPlanner()

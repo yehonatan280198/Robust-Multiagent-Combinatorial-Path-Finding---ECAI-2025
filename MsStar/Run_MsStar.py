@@ -113,7 +113,7 @@ class MsStar:
         return []
 
     def calc_heuristic_value(self, s):
-        min_longest_paths = []
+        shortest_paths = []
 
         for agent_loc, agent_direct in s.Vk:
             distances = [
@@ -121,9 +121,9 @@ class MsStar:
                 abs(agent_loc % self.num_cols - self.taskLocs[i] % self.num_cols)
                 for i, val in enumerate(s.Ak) if val == 0
             ]
-            min_longest_paths.append(min(distances, default=0))
+            shortest_paths.append(min(distances, default=0))
 
-        heuristic_makespan = max(min_longest_paths)
+        heuristic_makespan = max(shortest_paths)
         return heuristic_makespan, []
 
     def validateMove(self, loc):
@@ -275,8 +275,6 @@ class MsStar:
 
         up_or_down = 3 if curr_row > goal_row else (1 if curr_row < goal_row else None)
         left_or_right = 2 if curr_col > goal_col else (0 if curr_col < goal_col else None)
-
-        direction = -1
 
         if curr[1] == up_or_down or curr[1] == left_or_right:
             if curr_row != goal_row and curr_col != goal_col:
