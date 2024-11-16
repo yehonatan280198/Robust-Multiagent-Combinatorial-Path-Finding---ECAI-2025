@@ -52,7 +52,7 @@ class kBestSequencing:
             for col in range(size):
                 if row == col:
                     continue
-                elif (row, col) in excludeE:
+                elif (currLocsAndGoals[row], currLocsAndGoals[col]) in excludeE:
                     cmat[row, col] = 99999
                 elif row < len(self.locations) and len(self.locations) > col == (row + 1) % len(self.locations):
                     cmat[row, col] = 0
@@ -97,6 +97,7 @@ class kBestSequencing:
 
         ### get result
         mtsp_tours = {"Allocations": {}, "tour": []}
+        currLocsAndGoals = self.locations + self.taskLocs
 
         with open("files/Mtsp.tour", mode="r") as fres:
             lines = fres.readlines()
@@ -108,17 +109,17 @@ class kBestSequencing:
             agent = -1
             first = True
             while val != -1:
-                tour.append(val - 1)
+                tour.append(currLocsAndGoals[val - 1])
                 if first:
                     agent = val - 1
-                    currAgentTour.append(val - 1)
+                    currAgentTour.append(currLocsAndGoals[val - 1])
                     first = False
                 elif not first and val <= 5:
                     mtsp_tours["Allocations"][agent] = currAgentTour
-                    currAgentTour = [val - 1]
+                    currAgentTour = [currLocsAndGoals[val - 1]]
                     agent = val - 1
                 else:
-                    currAgentTour.append(val - 1)
+                    currAgentTour.append(currLocsAndGoals[val - 1])
 
                 ix = ix + 1
                 val = int(lines[ix])
@@ -129,7 +130,7 @@ class kBestSequencing:
         return mtsp_tours
 
 
-print(kBestSequencing([(2, 0), (4, 0), (6, 0), (8, 0), (10, 0)], [122, 124, 126, 128, 130], 1, 12).S)
+# print(kBestSequencing([(2, 0), (4, 0), (6, 0), (8, 0), (10, 0)], [122, 124, 126, 128, 130], 1, 12).S)
 
 #     def run(self):
 #         includeE, excludeE = set(), set()
