@@ -1,6 +1,6 @@
 from collections import defaultdict
 from queue import PriorityQueue
-from pRobustCbss.NodeAndConstClass import negConst
+from pRobustCbss.NodeAndConstClass import negConst, posConst
 from pRobustCbss.StateForLowLevel import State
 
 
@@ -65,11 +65,11 @@ class LowLevelPlan:
         return paths, totalCost
 
     def calc_heuristic_value(self, cur_location, goal):
-        # loc1 divided by num_of_cols gives row1, remainder gives col1
+        # cur_location divided by num_of_cols gives CurRow, remainder gives CurCol
         CurRow, CurCol = divmod(cur_location[0], self.num_of_cols)
-        # loc2 divided by num_of_cols gives row2, remainder gives col2
+        # goal divided by num_of_cols gives GoalRow, remainder gives GoalCol
         GoalRow, GoalCol = divmod(goal, self.num_of_cols)
-        # Compute Manhattan distance as the sum of absolute differences of rows and columns
+        # Compute Manhattan distance
         return abs(CurRow - GoalRow) + abs(CurCol - GoalCol)
 
     def GetNeighbors(self, state, agent):
@@ -81,7 +81,7 @@ class LowLevelPlan:
 
         # Try moving in the current direction
         loc_after_move = candidates[direct]
-        if 0 <= loc_after_move < self.num_of_cols * self.num_of_rows and self.validateMove(loc_after_move, agent, state):
+        if 0 <= loc_after_move < self.num_of_cols * self.num_of_rows and self.validateMove(loc, loc_after_move, agent, state):
             neighbors.add(State((loc_after_move, direct), state.g + 1, state))
 
         # Try turning left
@@ -97,7 +97,7 @@ class LowLevelPlan:
 
         return neighbors
 
-    def validateMove(self, loc_after_move, agent, state):
+    def validateMove(self, loc, loc_after_move, agent, state):
         # Check if the move stays within grid boundaries
         if loc_after_move // self.num_of_cols >= self.num_of_rows or loc_after_move % self.num_of_cols >= self.num_of_cols:
             return False
@@ -105,7 +105,11 @@ class LowLevelPlan:
         # Check if the move violates any negative constraints
         for const in self.Constraint:
             if isinstance(const, negConst):
-                if const.agent == agent and const.t == state.g + 1:
+                if const.agent == agent and const.t == state.g + 1 and (const.x == loc_after_move or const.x == (loc, loc_after_move) or const.x == (loc_after_move, loc)):
+                    return False
+
+            if isinstance(const, posConst):
+                if (const.agent1 == agent or const.agent2 == agent) and const.t == state.g + 1 and (const.x != loc_after_move and const.x != (loc, loc_after_move) and const.x != (loc_after_move, loc)):
                     return False
 
         return True

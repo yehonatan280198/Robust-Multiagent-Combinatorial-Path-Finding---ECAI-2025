@@ -188,8 +188,8 @@ class kBestSequencing:
         row1, col1 = divmod(loc1, self.num_of_cols)
         # loc2 divided by num_of_cols gives row2, remainder gives col2
         row2, col2 = divmod(loc2, self.num_of_cols)
-        # Compute Manhattan distance as the sum of absolute differences of rows and columns
+        # Compute Manhattan distance
         return abs(row1 - row2) + abs(col1 - col2)
 
 
-# print(kBestSequencing([(2, 0), (4, 0), (6, 0), (8, 0), (10, 0)], [122, 124, 126, 128, 130], 6, 12).Solution)
+# print(kBestSequencing([(2, 0), (4, 0), (6, 0), (8, 0), (10, 0)], [122, 124, 126, 128, 130], 1, 12).Solution)
