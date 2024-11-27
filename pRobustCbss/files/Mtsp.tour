@@ -1,6 +1,6 @@
-NAME : mtspf.18.tour
-COMMENT : Length = 18
-COMMENT : Found by LKH-3 [Keld Helsgaun] Mon Nov 25 23:59:44 2024
+NAME : mtspf.6.tour
+COMMENT : Length = 6
+COMMENT : Found by LKH-3 [Keld Helsgaun] Wed Nov 27 20:03:30 2024
 TYPE : TOUR
 DIMENSION : 10
 TOUR_SECTION
@@ -12,7 +12,7 @@ TOUR_SECTION
 10
 9
 8
-7
 6
+7
 -1
 EOF

@@ -1,8 +1,10 @@
+from collections import defaultdict
+
 
 class Node:
     def __init__(self):
-        self.paths = []
-        self.constraint = set()
+        self.paths = defaultdict(list)
+        self.constraint = defaultdict(set)
         self.g = 0
         self.sequence = {}
 

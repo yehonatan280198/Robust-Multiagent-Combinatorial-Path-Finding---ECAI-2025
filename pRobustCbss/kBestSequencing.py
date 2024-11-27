@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 import numpy as np
@@ -17,6 +18,9 @@ class kBestSequencing:
         self.Solution = self.run()
 
     def run(self):
+        current_dir = os.getcwd()
+        os.chdir('/home/yonikid/Desktop/SimulatorAgents/pRobustCbss')
+
         # Initialize sets for included and excluded edges
         includeE, excludeE = set(), set()
         # Solve the problem for the initial setup
@@ -34,6 +38,7 @@ class kBestSequencing:
 
             # Stop if k solutions are found
             if len(S) == self.k:
+                os.chdir(current_dir)
                 return S[self.k - 1]
 
             # Generate new potential solutions by varying include/exclude sets

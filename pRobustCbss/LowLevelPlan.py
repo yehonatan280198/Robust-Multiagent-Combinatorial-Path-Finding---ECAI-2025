@@ -5,23 +5,22 @@ from pRobustCbss.StateForLowLevel import State
 
 
 class LowLevelPlan:
-    def __init__(self, Allocations, Constraint, num_of_cols, num_of_rows, Positions):
-        self.Allocations = Allocations                  # Goal allocations for agents
-        self.Constraint = Constraint                    # Constraints for agent movements
+    def __init__(self, Node, num_of_cols, num_of_rows, Positions, agent_that_need_update_path):
+        self.Node = Node                                # Goal allocations for agents
         self.num_of_cols = num_of_cols                  # Grid columns
         self.num_of_rows = num_of_rows                  # Grid rows
         self.Positions = Positions                      # Initial agent locations
+        self.agent_that_need_update_path = agent_that_need_update_path
 
-        self.solution = self.run()
+        self.run()
 
     def run(self):
-        # Store paths for all agents
-        paths = defaultdict(list)
-        # Total cost of all paths
-        totalCost = 0
 
         # Process each agent's Goal sequence
-        for agent, sequence in self.Allocations.items():
+        for agent in self.agent_that_need_update_path:
+            self.Node.g -= (max(1, len(self.Node.paths[agent])) - 1)
+            sequence = self.Node.sequence["Allocations"][agent]
+
             # Priority queue for A* search
             OpenList = PriorityQueue()
             # Initial state for the agent
@@ -58,19 +57,28 @@ class LowLevelPlan:
             path.reverse()
 
             # Append the path for the current goal to the agent's path
-            paths[agent] = path
+            self.Node.paths[agent] = path
             # Update the total cost
-            totalCost += (len(path) - 1)
+            self.Node.g += (len(path) - 1)
 
-        return paths, totalCost
-
-    def calc_heuristic_value(self, cur_location, goal):
+    def calc_heuristic_value(self, CurPosition, goal):
         # cur_location divided by num_of_cols gives CurRow, remainder gives CurCol
-        CurRow, CurCol = divmod(cur_location[0], self.num_of_cols)
+        CurRow, CurCol = divmod(CurPosition[0], self.num_of_cols)
         # goal divided by num_of_cols gives GoalRow, remainder gives GoalCol
         GoalRow, GoalCol = divmod(goal, self.num_of_cols)
         # Compute Manhattan distance
-        return abs(CurRow - GoalRow) + abs(CurCol - GoalCol)
+        time = abs(CurRow - GoalRow) + abs(CurCol - GoalCol)
+
+        if time == 0:
+            return 0
+
+        up_or_down = 3 if CurRow > GoalRow else (1 if CurRow < GoalRow else None)
+        left_or_right = 2 if CurCol > GoalCol else (0 if CurCol < GoalCol else None)
+
+        if CurPosition[1] == up_or_down or CurPosition[1] == left_or_right:
+            return time + 1
+
+        return time + 2
 
     def GetNeighbors(self, state, agent):
         neighbors = set()
@@ -103,7 +111,7 @@ class LowLevelPlan:
             return False
 
         # Check if the move violates any negative constraints
-        for const in self.Constraint:
+        for const in self.Node.constraint[agent]:
             if isinstance(const, negConst):
                 if const.agent == agent and const.t == state.g + 1 and (const.x == loc_after_move or const.x == (loc, loc_after_move) or const.x == (loc_after_move, loc)):
                     return False

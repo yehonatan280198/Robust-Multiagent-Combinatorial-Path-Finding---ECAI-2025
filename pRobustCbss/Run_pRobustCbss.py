@@ -1,3 +1,4 @@
+import time
 from itertools import combinations
 from queue import PriorityQueue
 import heapq
@@ -11,20 +12,21 @@ from pRobustCbss.kBestSequencing import kBestSequencing
 class pRobustCbss:
 
     def __init__(self, Positions, GoalLocations, no_collision_prob, delaysProb, num_of_cols, num_of_rows):
-        self.Positions = Positions                      # Initial positions of agents
-        self.GoalLocations = GoalLocations              # Locations of goals
-        self.no_collision_prob = no_collision_prob      # The Probability of no collision
-        self.delaysProb = delaysProb                    # Delay probabilities for each agent
-        self.num_of_cols = num_of_cols                  # Number of columns in the grid
-        self.num_of_rows = num_of_rows                  # Number of rows in the grid
+        self.Positions = Positions  # Initial positions of agents
+        self.GoalLocations = GoalLocations  # Locations of goals
+        self.no_collision_prob = no_collision_prob  # The Probability of no collision
+        self.delaysProb = delaysProb  # Delay probabilities for each agent
+        self.num_of_cols = num_of_cols  # Number of columns in the grid
+        self.num_of_rows = num_of_rows  # Number of rows in the grid
 
-        self.OPEN = PriorityQueue()                     # Open list for CBS nodes, prioritized by cost
-        self.num_roots_generated = 0                    # Counter for the number of root nodes generated
-        self.kOptimalSequences = {}                     # Dictionary to store k-optimal sequences of allocations
+        self.OPEN = PriorityQueue()  # Open list for CBS nodes, prioritized by cost
+        self.num_roots_generated = 0  # Counter for the number of root nodes generated
+        self.kOptimalSequences = {}  # Dictionary to store k-optimal sequences of allocations
 
         self.Solution = self.run()
 
     def run(self):
+
         # Calculate the best sequence of task allocations (k=1)
         self.kOptimalSequences[1] = kBestSequencing(self.Positions, self.GoalLocations, 1, self.num_of_cols).Solution
         # Increment root node counter
@@ -35,7 +37,7 @@ class pRobustCbss:
         # Assign the best sequence of task allocations for all agents to the root node
         Root.sequence = self.kOptimalSequences[1]
         # Generate paths and calculate the cost for the root node
-        Root.paths, Root.g = LowLevelPlan(Root.sequence["Allocations"], set(), self.num_of_cols, self.num_of_rows, self.Positions).solution
+        LowLevelPlan(Root, self.num_of_cols, self.num_of_rows, self.Positions, list(range(len(self.Positions))))
         # Add the root node to the open list
         self.OPEN.put((Root.g, Root))
 
@@ -71,13 +73,15 @@ class pRobustCbss:
 
         # Generate a new root with an updated sequence
         self.num_roots_generated += 1
-        self.kOptimalSequences[self.num_roots_generated] = kBestSequencing(self.Positions, self.GoalLocations, self.num_roots_generated, self.num_of_cols).Solution
+        self.kOptimalSequences[self.num_roots_generated] = kBestSequencing(self.Positions, self.GoalLocations,
+                                                                           self.num_roots_generated,
+                                                                           self.num_of_cols).Solution
 
         # Create a new root node
         newRoot = Node()
         newRoot.sequence = self.kOptimalSequences[self.num_roots_generated]
         # Calculate paths and cost for the new root
-        newRoot.paths, newRoot.g = LowLevelPlan(newRoot.sequence["Allocations"], set(), self.num_of_cols, self.num_of_rows, self.Positions).solution
+        LowLevelPlan(newRoot, self.num_of_cols, self.num_of_rows, self.Positions, list(range(len(self.Positions))))
 
         # Add the new root node to OPEN if its cost is lower or equal to the current node's cost
         if N.g <= newRoot.g:
@@ -125,7 +129,7 @@ class pRobustCbss:
             for i in range(len(path1) - 1):
                 edge = (path1[i][0], path1[i + 1][0])
                 if edge not in edgeTimes1:
-                    edgeTimes1[edge] = i+1
+                    edgeTimes1[edge] = i + 1
 
             edgeTimes2 = {}
             for i in range(len(path2) - 1):
@@ -151,18 +155,27 @@ class pRobustCbss:
 
     def GenChild(self, N, NewCons):
         A = Node()
-        A.constraint = N.constraint | set(NewCons)      # Add new constraints
+        A.constraint = N.constraint
         A.paths = N.paths
         A.sequence = N.sequence
         A.g = N.g
 
         if isinstance(NewCons, negConst):
-            A.paths, A.g = LowLevelPlan(A.sequence["Allocations"], A.constraint, self.num_of_cols, self.num_of_rows, self.Positions).solution
+            A.constraint[NewCons.agent] = A.constraint[NewCons.agent] | set(NewCons)
+            LowLevelPlan(A, self.num_of_cols, self.num_of_rows, self.Positions, list(NewCons.agent))
+
+        else:
+            A.constraint[NewCons.agent1] = A.constraint[NewCons.agent1.agent] | set(NewCons)
+            A.constraint[NewCons.agent2] = A.constraint[NewCons.agent2.agent] | set(NewCons)
 
         return A
 
 
+start_time = time.time()
 p = pRobustCbss([(2, 0), (4, 0), (6, 0), (8, 0), (10, 0)], [122, 124, 126, 128, 130], 0.1,
-                  {0: 0.1, 1: 0.1, 2: 0.1, 3: 0.1, 4: 0.1}, 12, 12)
+                {0: 0.1, 1: 0.1, 2: 0.1, 3: 0.1, 4: 0.1}, 12, 12)
+end_time = time.time()
+elapsed_time_seconds = end_time - start_time
+print(f"Elapsed time: {elapsed_time_seconds} seconds")
 
 print(p.Solution)
