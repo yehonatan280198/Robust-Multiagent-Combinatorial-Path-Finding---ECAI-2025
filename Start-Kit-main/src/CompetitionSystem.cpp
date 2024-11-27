@@ -17,21 +17,14 @@ void BaseSystem::move(vector<Action>& actions, int timestep)
 {
     for (int k = 0; k < num_of_agents; k++)
     {
-        // Check if the agent's delay allows him to move
-        if ((timestep - env->lastTimeMove[k] < env->manufacturerDelay_FailureProbability[k].first) && (actions[k] != Action::NA))
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<> dis(0.0, 1.0);
+        if (dis(gen) < env->FailureProbability[k] and actions[k] != Action::NA)
             actions[k] = Action::W;
 
         else if (actions[k] != Action::NA){
             env->lastTimeMove[k] = timestep;
-            env->observationDelay_TotalMoves[k].second += 1;
-            env->observationDelay_TotalMoves[k].first = timestep / env->observationDelay_TotalMoves[k].second;
-
-            // Generate a random number for the possibility of increasing the delay
-            std::random_device rd;
-            std::mt19937 gen(rd());
-            std::uniform_real_distribution<> dis(0.0, 1.0);
-            if (dis(gen) < env->manufacturerDelay_FailureProbability[k].second)
-                env->manufacturerDelay_FailureProbability[k].first += 1;
         }
 
         planner_movements[k].push_back(actions[k]);
@@ -191,13 +184,10 @@ void BaseSystem::initialize()
     env->cols = map.cols;
     env->map = map.map;
     env->timeToDiagnosis = timeToDiagnosis;
-    env->manufacturerDelay_FailureProbability = manufacturerDelay_FailureProbability;
+    env->FailureProbability = FailureProbability;
     env->unfinishedTasks = unfinishedTasks;
     env->goal_locations.resize(num_of_agents);
 
-    for (size_t i = 0; i < manufacturerDelay_FailureProbability.size(); ++i) {
-        env->observationDelay_TotalMoves.push_back(std::make_pair(manufacturerDelay_FailureProbability[i].first, 0));
-    }
 
     timestep = 0;
     curr_states = starts;

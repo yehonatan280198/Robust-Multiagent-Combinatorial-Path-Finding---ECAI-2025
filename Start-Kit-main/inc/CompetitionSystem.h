@@ -69,7 +69,7 @@ protected:
     vector<State> starts;
     int num_of_agents;
 
-    std::vector<std::pair<int, double>> manufacturerDelay_FailureProbability;
+    std::vector<double> FailureProbability;
     int timeToDiagnosis;
 
     vector<State> curr_states;
@@ -105,7 +105,7 @@ protected:
 class AllocationByMakespan : public BaseSystem
 {
 public:
-	AllocationByMakespan(Grid &grid, MAPFPlanner* planner, std::vector<int>& start_locs, std::vector<int>& tasks, ActionModelWithRotate* model, std::vector<std::pair<int, double>>& Delay_Failure, int diagnosisTime):
+	AllocationByMakespan(Grid &grid, MAPFPlanner* planner, std::vector<int>& start_locs, std::vector<int>& tasks, ActionModelWithRotate* model, std::vector<double>& Delay_Failure, int diagnosisTime):
         BaseSystem(grid, planner, model)
     {
         int task_id = 0;
@@ -122,7 +122,7 @@ public:
             env->lastTimeMove.push_back(0);
         }
 
-        manufacturerDelay_FailureProbability = Delay_Failure;
+        FailureProbability = Delay_Failure;
         timeToDiagnosis = diagnosisTime;
     };
 

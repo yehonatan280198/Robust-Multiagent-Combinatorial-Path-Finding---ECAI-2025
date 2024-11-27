@@ -20,8 +20,7 @@ public:
     int curr_timestep = 0;
     vector<State> curr_states;
 
-    std::vector<std::pair<int, double>> manufacturerDelay_FailureProbability;
-    std::vector<std::pair<double, int>> observationDelay_TotalMoves;
+    std::vector<double> FailureProbability;
     int timeToDiagnosis;
     double makeSpanForCurPlan;
     std::vector<int> curAgents;

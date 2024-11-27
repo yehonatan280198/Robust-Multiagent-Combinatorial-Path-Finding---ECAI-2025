@@ -30,21 +30,21 @@
         ]
     ],
     "numTaskFinished": 6,
-    "sumOfCost": 20,
-    "makespan": 20,
+    "sumOfCost": 21,
+    "makespan": 21,
     "actualPaths": [
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "R,F,F,F,F,F,F,F,F,F,F,R,F,F,F,F,F,F,F,F"
+        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
+        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
+        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
+        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
+        "R,F,F,F,F,F,F,F,F,F,F,R,W,F,F,F,F,F,F,F,F"
     ],
     "plannerPaths": [
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "R,F,F,F,F,F,F,F,F,F,F,R,F,F,F,F,F,F,F,F"
+        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
+        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
+        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
+        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
+        "R,F,F,F,F,F,F,F,F,F,F,R,W,F,F,F,F,F,F,F,F"
     ],
     "errors": [],
     "events": [
@@ -95,22 +95,22 @@
             ],
             [
                 4,
-                14,
+                15,
                 "finished"
             ],
             [
                 3,
-                16,
+                17,
                 "finished"
             ],
             [
                 2,
-                18,
+                19,
                 "finished"
             ],
             [
                 1,
-                20,
+                21,
                 "finished"
             ]
         ]

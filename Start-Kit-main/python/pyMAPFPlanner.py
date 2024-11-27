@@ -9,7 +9,6 @@ from pRobustCbss.Run_pRobustCbss import pRobustCbss
 class pyMAPFPlanner:
     def __init__(self, pyenv=None):
         self.paths = []
-        self.index = 0
         if pyenv is not None:
             self.env = pyenv.env
         print("pyMAPFPlanner created!  python debug")
@@ -29,22 +28,22 @@ class pyMAPFPlanner:
             if not self.env.goal_locations[i]:
                 actions[i] = MAPF.Action.NA
             else:
-                if self.paths[i][self.index][0] != self.env.curr_states[i].location:
+                index = self.paths[i].index((self.env.curr_states[i].location, self.env.curr_states[i].orientation)) + 1
+                if self.paths[i][index][0] != self.env.curr_states[i].location:
                     actions[i] = MAPF.Action.FW
-                elif self.paths[i][self.index][1] != self.env.curr_states[i].orientation:
-                    incr = self.paths[i][self.index][1] - self.env.curr_states[i].orientation
+                elif self.paths[i][index][1] != self.env.curr_states[i].orientation:
+                    incr = self.paths[i][index][1] - self.env.curr_states[i].orientation
                     if incr == 1 or incr == -3:
                         actions[i] = MAPF.Action.CR
                     elif incr == -1 or incr == 3:
                         actions[i] = MAPF.Action.CCR
 
-        self.index += 1
         return actions
 
     def updateTasks(self, currentAgents):
         locations = [(self.env.curr_states[agent].location, self.env.curr_states[agent].orientation) for agent in currentAgents]
         taskLocs = [task.location for task in self.env.unfinishedTasks]
-        delaysProb = {i: self.env.observationDelay_TotalMoves[agent][0] for i, agent in enumerate(currentAgents)}
+        delaysProb = {i: self.env.FailureProbability[agent] for i, agent in enumerate(currentAgents)}
 
         self.paths = pRobustCbss(locations, taskLocs, 0.1, delaysProb, self.env.cols, self.env.rows).Solution
 

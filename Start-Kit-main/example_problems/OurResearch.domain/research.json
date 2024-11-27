@@ -2,7 +2,6 @@
     "mapFile": "research_map_12X12.map",
     "agentFile": "research_agents.agents",
     "taskFile": "research_tasks.tasks",
-    "delays": "0.1,0.1,0.1,0.1,0.1",
-    "failureProbability": "0,0,0,0,0",
+    "failureProbability": "0.1,0.1,0.1,0.1,0.1",
     "timeToDiagnosis": 150
 }

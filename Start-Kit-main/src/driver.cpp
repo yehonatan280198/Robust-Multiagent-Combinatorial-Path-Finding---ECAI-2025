@@ -33,29 +33,22 @@ void sigint_handler(int a)
     _exit(0);
 }
 
-std::vector<std::pair<int, double>> convertStringToVector(const std::string& delays, const std::string& failureProbability) {
-    std::vector<int> delaysVec;
-    std::stringstream ssDelays(delays);
-    std::string item;
-
-    // Convert delays to vector of int
-    while (std::getline(ssDelays, item, ',')) {
-        delaysVec.push_back(std::stoi(item));
-    }
+std::vector<double> convertStringToVector(const std::string& failureProbability) {
 
     std::vector<double> failureProbabilityVec;
     std::stringstream ssFailure(failureProbability);
+    std::string item;
 
     // Convert failureProbability to vector of double
     while (std::getline(ssFailure, item, ',')) {
         failureProbabilityVec.push_back(std::stod(item));
     }
 
-    std::vector<std::pair<int, double>> result;
+    std::vector<double> result;
 
     // Combine delays and failureProbability into a vector of pairs
-    for (size_t i = 0; i < delaysVec.size(); ++i) {
-        result.push_back(std::make_pair(delaysVec[i], failureProbabilityVec[i]));
+    for (size_t i = 0; i < failureProbabilityVec.size(); ++i) {
+        result.push_back(failureProbabilityVec[i]);
     }
 
     return result;
@@ -145,9 +138,8 @@ int main(int argc, char **argv)
     ActionModelWithRotate *model = new ActionModelWithRotate(grid);
     model->set_logger(logger);
 
-    std::string delaysStr = read_param_json<std::string>(data, "delays");
     std::string failureProbabilityStr = read_param_json<std::string>(data, "failureProbability");
-    std::vector<std::pair<int, double>> Delay_Failure = convertStringToVector(delaysStr, failureProbabilityStr);
+    std::vector<double> Delay_Failure = convertStringToVector(failureProbabilityStr);
 
     int diagnosisTime = read_param_json<int>(data, "timeToDiagnosis");
 
