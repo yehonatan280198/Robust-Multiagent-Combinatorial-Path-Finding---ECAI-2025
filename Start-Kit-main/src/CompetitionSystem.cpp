@@ -17,6 +17,8 @@ void BaseSystem::move(vector<Action>& actions, int timestep)
 {
     for (int k = 0; k < num_of_agents; k++)
     {
+        planner_movements[k].push_back(actions[k]);
+
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<> dis(0.0, 1.0);
@@ -27,7 +29,7 @@ void BaseSystem::move(vector<Action>& actions, int timestep)
             env->lastTimeMove[k] = timestep;
         }
 
-        planner_movements[k].push_back(actions[k]);
+//        planner_movements[k].push_back(actions[k]);
     }
 
     curr_states = model->result_states(curr_states, actions);
@@ -184,6 +186,8 @@ void BaseSystem::initialize()
     env->cols = map.cols;
     env->map = map.map;
     env->timeToDiagnosis = timeToDiagnosis;
+    env->verifyAlpha = verifyAlpha;
+    env->NoCollisionProbability = NoCollisionProbability;
     env->FailureProbability = FailureProbability;
     env->unfinishedTasks = unfinishedTasks;
     env->goal_locations.resize(num_of_agents);

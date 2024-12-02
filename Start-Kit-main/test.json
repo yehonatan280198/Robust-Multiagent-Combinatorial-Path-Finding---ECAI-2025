@@ -1,116 +1,71 @@
 {
     "actionModel": "MAPF_T",
     "AllValid": "Yes",
-    "teamSize": 5,
+    "teamSize": 3,
     "start": [
         [
+            7,
             0,
-            2,
             "E"
         ],
         [
-            0,
-            4,
+            3,
+            11,
             "E"
         ],
         [
-            0,
-            6,
-            "E"
-        ],
-        [
-            0,
-            8,
-            "E"
-        ],
-        [
-            0,
-            10,
+            9,
+            7,
             "E"
         ]
     ],
-    "numTaskFinished": 6,
-    "sumOfCost": 21,
-    "makespan": 21,
+    "numTaskFinished": 3,
+    "sumOfCost": 30,
+    "makespan": 19,
     "actualPaths": [
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "R,F,F,F,F,F,F,F,F,F,F,R,W,F,F,F,F,F,F,F,F"
+        "F,F,F,F,W,F,C,F,F,W,W,F,F,F,F,W,F,R,F",
+        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
+        "R,W,F,F,R,W,F,F,W,F,F,T,T,T,T,T,T,T,T"
     ],
     "plannerPaths": [
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "R,F,F,F,F,F,F,F,F,F,F,R,W,F,F,F,F,F,F,F,F"
+        "F,F,F,F,F,F,C,F,F,F,F,F,F,F,F,F,F,R,F",
+        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
+        "R,F,F,F,R,F,F,F,F,F,F,T,T,T,T,T,T,T,T"
     ],
     "errors": [],
     "events": [
-        [],
-        [],
-        [],
+        [
+            [
+                1,
+                0,
+                "assigned"
+            ],
+            [
+                3,
+                0,
+                "assigned"
+            ],
+            [
+                1,
+                9,
+                "finished"
+            ],
+            [
+                3,
+                19,
+                "finished"
+            ]
+        ],
         [],
         [
             [
-                5,
-                0,
-                "assigned"
-            ],
-            [
-                5,
-                0,
-                "assigned"
-            ],
-            [
-                4,
-                0,
-                "assigned"
-            ],
-            [
-                3,
-                0,
-                "assigned"
-            ],
-            [
                 2,
                 0,
                 "assigned"
             ],
             [
-                1,
-                0,
-                "assigned"
-            ],
-            [
-                5,
+                2,
                 11,
-                "finished"
-            ],
-            [
-                5,
-                12,
-                "finished"
-            ],
-            [
-                4,
-                15,
-                "finished"
-            ],
-            [
-                3,
-                17,
-                "finished"
-            ],
-            [
-                2,
-                19,
-                "finished"
-            ],
-            [
-                1,
-                21,
                 "finished"
             ]
         ]
@@ -118,28 +73,18 @@
     "tasks": [
         [
             0,
-            10,
-            2
+            5,
+            5
         ],
         [
             1,
-            10,
-            4
+            11,
+            3
         ],
         [
             2,
-            10,
+            0,
             6
-        ],
-        [
-            3,
-            10,
-            8
-        ],
-        [
-            4,
-            10,
-            10
         ]
     ]
 }

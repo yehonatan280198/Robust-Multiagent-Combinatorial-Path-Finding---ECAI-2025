@@ -71,6 +71,8 @@ protected:
 
     std::vector<double> FailureProbability;
     int timeToDiagnosis;
+    double verifyAlpha;
+    double NoCollisionProbability;
 
     vector<State> curr_states;
 
@@ -105,7 +107,7 @@ protected:
 class AllocationByMakespan : public BaseSystem
 {
 public:
-	AllocationByMakespan(Grid &grid, MAPFPlanner* planner, std::vector<int>& start_locs, std::vector<int>& tasks, ActionModelWithRotate* model, std::vector<double>& Delay_Failure, int diagnosisTime):
+	AllocationByMakespan(Grid &grid, MAPFPlanner* planner, std::vector<int>& start_locs, std::vector<int>& tasks, ActionModelWithRotate* model, std::vector<double>& Delay_Failure, int diagnosisTime, double alphaForVerify, double noCollisionProbability):
         BaseSystem(grid, planner, model)
     {
         int task_id = 0;
@@ -124,6 +126,8 @@ public:
 
         FailureProbability = Delay_Failure;
         timeToDiagnosis = diagnosisTime;
+        verifyAlpha = alphaForVerify;
+        NoCollisionProbability = noCollisionProbability;
     };
 
 	~AllocationByMakespan(){};

@@ -138,17 +138,19 @@ int main(int argc, char **argv)
     ActionModelWithRotate *model = new ActionModelWithRotate(grid);
     model->set_logger(logger);
 
-    std::string failureProbabilityStr = read_param_json<std::string>(data, "failureProbability");
+    std::string failureProbabilityStr = read_param_json<std::string>(data, "delayProbability");
     std::vector<double> Delay_Failure = convertStringToVector(failureProbabilityStr);
 
     int diagnosisTime = read_param_json<int>(data, "timeToDiagnosis");
+    double alphaForVerify = read_param_json<double>(data, "verifyAlpha");
+    double NoCollisionProbability = read_param_json<double>(data, "noCollisionProbability");
 
     std::vector<int> agents = read_int_vec(base_folder + read_param_json<std::string>(data, "agentFile"));
     std::vector<int> tasks = read_int_vec(base_folder + read_param_json<std::string>(data, "taskFile"));
     if (agents.size() > tasks.size())
         logger->log_warning("Not enough tasks for robots (number of tasks < team size)");
 
-    system_ptr = std::make_unique<AllocationByMakespan>(grid, planner, agents, tasks, model, Delay_Failure, diagnosisTime);
+    system_ptr = std::make_unique<AllocationByMakespan>(grid, planner, agents, tasks, model, Delay_Failure, diagnosisTime, alphaForVerify, NoCollisionProbability);
 
     system_ptr->set_logger(logger);
     system_ptr->set_plan_time_limit(vm["planTimeLimit"].as<int>());

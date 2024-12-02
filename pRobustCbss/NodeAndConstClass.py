@@ -15,6 +15,14 @@ class negConst:
         self.x = x
         self.t = t
 
+    def __eq__(self, other):
+        if not isinstance(other, negConst):
+            return False
+        return (self.agent, self.x, self.t) == (other.agent, other.x, other.t)
+
+    def __hash__(self):
+        return hash((self.agent, self.x, self.t))
+
 
 class posConst:
     def __init__(self, agent1, agent2, x, t, SumTimeAndDelta):
@@ -22,5 +30,13 @@ class posConst:
         self.agent2 = agent2
         self.x = x
         self.t = t
-        self.SumTimeAndDelta= SumTimeAndDelta
+        self.SumTimeAndDelta = SumTimeAndDelta
+
+    def __eq__(self, other):
+        if not isinstance(other, posConst):
+            return False
+        return (self.agent1, self.agent2, self.x, self.t, self.SumTimeAndDelta) == (other.agent1, other.agent2, other.x, other.t, other.SumTimeAndDelta)
+
+    def __hash__(self):
+        return hash((self.agent1, self.agent2, self.x, self.t, self.SumTimeAndDelta))
 

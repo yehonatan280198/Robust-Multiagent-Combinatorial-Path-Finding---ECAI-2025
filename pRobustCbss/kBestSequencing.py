@@ -15,6 +15,14 @@ class kBestSequencing:
         self.OPEN = PriorityQueue()                                     # Priority queue for exploring k-best solutions
         self.includedEdgesRealCost = {}                                 # Stores real costs for included edges
 
+        # Precompute Manhattan distances between all points
+        self.precomputed_distances = {}
+        currLocsAndGoals = self.locations + self.GoalLocations
+        for i, loc1 in enumerate(currLocsAndGoals):
+            for j, loc2 in enumerate(currLocsAndGoals):
+                self.precomputed_distances[(i, j)] = self.calculateManhattanDistance(loc1, loc2)
+
+        # Run the algorithm
         self.Solution = self.run()
 
     def run(self):
@@ -52,10 +60,15 @@ class kBestSequencing:
                 PotentialOptimalSequences = self.solveRtsp(newIncludeE, newExcludeE)
 
                 # Validate the new solution by ensuring it respects include/exclude constraints
-                if (all(edge not in PotentialOptimalSequences["tour"] for edge in newExcludeE) and
-                        all(edge in PotentialOptimalSequences["tour"] for edge in newIncludeE)):
-                    # Add the valid solution to the queue
-                    self.OPEN.put((PotentialOptimalSequences["Cost"], (newIncludeE, newExcludeE, PotentialOptimalSequences)))
+                if not all(edge in PotentialOptimalSequences["tour"] for edge in newIncludeE):
+                    continue
+
+                # Validate the new solution by ensuring it respects include/exclude constraints
+                if any(edge in PotentialOptimalSequences["tour"] for edge in newExcludeE):
+                    continue
+
+                # Add the valid solution to the queue
+                self.OPEN.put((PotentialOptimalSequences["Cost"], (newIncludeE, newExcludeE, PotentialOptimalSequences)))
 
     def solveRtsp(self, includeE, excludeE):
         # Create the cost matrix
@@ -112,7 +125,7 @@ class kBestSequencing:
 
                 # Default case: calculate Manhattan distance as the cost
                 else:
-                    cmat[row, col] = self.calculateManhattanDistance(currLocsAndGoals[row], currLocsAndGoals[col])
+                    cmat[row, col] = self.precomputed_distances[(row, col)]
         return cmat
 
     def generateMtspPar(self):
@@ -167,7 +180,7 @@ class kBestSequencing:
                     first = False
 
                 # If it's a new agent
-                elif not first and val <= 5:
+                elif not first and val <= len(self.locations):
                     mtsp_tours["Allocations"][agent] = currAgentTour
                     currAgentTour = [currLocsAndGoals[val - 1]]
                     agent = val - 1

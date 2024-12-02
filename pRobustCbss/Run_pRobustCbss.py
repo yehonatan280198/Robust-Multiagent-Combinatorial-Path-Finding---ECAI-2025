@@ -1,3 +1,4 @@
+import copy
 import time
 from itertools import combinations
 from queue import PriorityQueue
@@ -11,13 +12,14 @@ from pRobustCbss.kBestSequencing import kBestSequencing
 
 class pRobustCbss:
 
-    def __init__(self, Positions, GoalLocations, no_collision_prob, delaysProb, num_of_cols, num_of_rows):
+    def __init__(self, Positions, GoalLocations, no_collision_prob, delaysProb, num_of_cols, num_of_rows, verifyAlpha):
         self.Positions = Positions  # Initial positions of agents
         self.GoalLocations = GoalLocations  # Locations of goals
         self.no_collision_prob = no_collision_prob  # The Probability of no collision
         self.delaysProb = delaysProb  # Delay probabilities for each agent
         self.num_of_cols = num_of_cols  # Number of columns in the grid
         self.num_of_rows = num_of_rows  # Number of rows in the grid
+        self.verifyAlpha = verifyAlpha
 
         self.OPEN = PriorityQueue()  # Open list for CBS nodes, prioritized by cost
         self.num_roots_generated = 0  # Counter for the number of root nodes generated
@@ -50,16 +52,16 @@ class pRobustCbss:
             N = self.CheckNewRoot(N)
 
             # If the paths in the current node are verified as valid, avoiding collisions with probability P, return them as the solution
-            if verify(N.paths, self.delaysProb, self.no_collision_prob):
+            if verify(N.paths, self.delaysProb, self.no_collision_prob, self.verifyAlpha):
                 return N.paths
 
             # Identify the first conflict in the paths
-            delta, time, x, agent1_info, agent2_info = self.getlConflict(N)
+            _, _, x, agent1AndTime, agent2AndTime = self.getlConflict(N)
 
             # Generate child nodes with constraints to resolve the conflict
-            A1 = self.GenChild(N, negConst(agent1_info[0], x, agent1_info[1]))
-            A2 = self.GenChild(N, negConst(agent2_info[0], x, agent2_info[1]))
-            A3 = self.GenChild(N, posConst(agent1_info[0], agent2_info[0], x, agent1_info[1], agent2_info[1]))
+            A1 = self.GenChild(N, negConst(agent1AndTime[0], x, agent1AndTime[1]))
+            A2 = self.GenChild(N, negConst(agent2AndTime[0], x, agent2AndTime[1]))
+            A3 = self.GenChild(N, posConst(agent1AndTime[0], agent2AndTime[0], x, agent1AndTime[1], agent2AndTime[1]))
 
             # Add child nodes to the open list
             self.OPEN.put((A1.g, A1))
@@ -100,7 +102,7 @@ class pRobustCbss:
             path1 = N.paths[agent1]
             path2 = N.paths[agent2]
 
-            # Create vertex-time dictionaries for fast lookup
+            # Create loc-time dictionaries
             locTimes1 = {}
             for i, (loc, _) in enumerate(path1):
                 if loc not in locTimes1:
@@ -117,14 +119,14 @@ class pRobustCbss:
                 time1 = locTimes1[loc]
                 time2 = locTimes2[loc]
                 delta = abs(time1 - time2)
-                time = min(time1, time2)
+                Time = min(time1, time2)
 
                 if time1 <= time2:
-                    heapq.heappush(heap, (delta, time, loc, (agent1, time), (agent2, time + delta)))
+                    heapq.heappush(heap, (delta, Time, loc, (agent1, Time), (agent2, Time + delta)))
                 else:
-                    heapq.heappush(heap, (delta, time, loc, (agent1, time + delta), (agent2, time)))
+                    heapq.heappush(heap, (delta, Time, loc, (agent1, Time + delta), (agent2, Time)))
 
-            # Create edge-time dictionaries for fast lookup
+            # Create edge-time dictionaries
             edgeTimes1 = {}
             for i in range(len(path1) - 1):
                 edge = (path1[i][0], path1[i + 1][0])
@@ -143,39 +145,45 @@ class pRobustCbss:
                 if reversed_edge1 in edgeTimes2:
                     time2 = edgeTimes2.get(reversed_edge1)
                     delta = abs(time1 - time2)
-                    time = min(time1, time2)
+                    Time = min(time1, time2)
 
                     if time1 <= time2:
-                        heapq.heappush(heap, (delta, time, edge1, (agent1, time), (agent2, time + delta)))
+                        heapq.heappush(heap, (delta, Time, edge1, (agent1, Time), (agent2, Time + delta)))
                     else:
-                        heapq.heappush(heap, (delta, time, edge1, (agent1, time + delta), (agent2, time)))
+                        heapq.heappush(heap, (delta, Time, edge1, (agent1, Time + delta), (agent2, Time)))
 
         # Return the first conflict in the heap
-        return heapq.heappop(heap) if heap else None
+        return heapq.heappop(heap)
 
     def GenChild(self, N, NewCons):
         A = Node()
-        A.constraint = N.constraint
-        A.paths = N.paths
+        A.constraint = copy.deepcopy(N.constraint)
+        A.paths = {agent: path[:] for agent, path in N.paths.items()}
         A.sequence = N.sequence
         A.g = N.g
 
         if isinstance(NewCons, negConst):
-            A.constraint[NewCons.agent] = A.constraint[NewCons.agent] | set(NewCons)
+            A.constraint[NewCons.agent] = A.constraint[NewCons.agent] | {NewCons}
             LowLevelPlan(A, self.num_of_cols, self.num_of_rows, self.Positions, list(NewCons.agent))
 
-        else:
-            A.constraint[NewCons.agent1] = A.constraint[NewCons.agent1.agent] | set(NewCons)
-            A.constraint[NewCons.agent2] = A.constraint[NewCons.agent2.agent] | set(NewCons)
+        elif isinstance(NewCons, posConst):
+            A.constraint[NewCons.agent1] = A.constraint[NewCons.agent1.agent] | {NewCons}
+            A.constraint[NewCons.agent2] = A.constraint[NewCons.agent2.agent] | {NewCons}
 
         return A
 
 
-start_time = time.time()
-p = pRobustCbss([(2, 0), (4, 0), (6, 0), (8, 0), (10, 0)], [122, 124, 126, 128, 130], 0.1,
-                {0: 0.1, 1: 0.1, 2: 0.1, 3: 0.1, 4: 0.1}, 12, 12)
-end_time = time.time()
-elapsed_time_seconds = end_time - start_time
-print(f"Elapsed time: {elapsed_time_seconds} seconds")
+# start_time = time.time()
+# p = pRobustCbss([(84, 0), (47, 0), (115, 0)], [15, 135, 6], 0.1,
+#                 {0: 0.1, 1: 0.1, 2: 0.1}, 12, 12, 0.05)
 
-print(p.Solution)
+# p = pRobustCbss([(8, 0)], [11, 14], 0.1,
+#                 {0: 0.1, 1: 0.1, 2: 0.1}, 12, 12, 0.05)
+
+# p = pRobustCbss([(2, 0), (4, 0), (6, 0), (8, 0), (10, 0)], [122, 124, 126, 128, 130], 0.1,
+#                 {0: 0.1, 1: 0.1, 2: 0.1, 3: 0.1, 4: 0.1}, 12, 12, 0.05)
+# end_time = time.time()
+# elapsed_time_seconds = end_time - start_time
+# print(f"Elapsed time: {elapsed_time_seconds} seconds")
+#
+# print(p.Solution)

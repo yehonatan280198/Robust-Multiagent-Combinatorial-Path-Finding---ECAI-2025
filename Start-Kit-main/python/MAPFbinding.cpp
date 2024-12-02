@@ -57,7 +57,9 @@ PYBIND11_MODULE(MAPF, m ){
         .def_readwrite("makeSpanForCurPlan",&SharedEnvironment::makeSpanForCurPlan)
         .def_readwrite("curAgents",&SharedEnvironment::curAgents)
         .def_readwrite("lastTimeMove",&SharedEnvironment::lastTimeMove)
-        .def_readwrite("unfinishedTasks",&SharedEnvironment::unfinishedTasks);
+        .def_readwrite("unfinishedTasks",&SharedEnvironment::unfinishedTasks)
+        .def_readonly("verifyAlpha",&SharedEnvironment::verifyAlpha)
+        .def_readonly("NoCollisionProbability",&SharedEnvironment::NoCollisionProbability);
 
 
 

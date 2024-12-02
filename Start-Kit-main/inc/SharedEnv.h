@@ -22,6 +22,8 @@ public:
 
     std::vector<double> FailureProbability;
     int timeToDiagnosis;
+    double verifyAlpha;
+    double NoCollisionProbability;
     double makeSpanForCurPlan;
     std::vector<int> curAgents;
     std::vector<int> lastTimeMove;
