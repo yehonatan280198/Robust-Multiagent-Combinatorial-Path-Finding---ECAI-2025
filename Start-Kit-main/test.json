@@ -1,36 +1,29 @@
 {
     "actionModel": "MAPF_T",
     "AllValid": "Yes",
-    "teamSize": 3,
+    "teamSize": 2,
     "start": [
         [
-            7,
-            0,
+            10,
+            5,
             "E"
         ],
         [
-            3,
-            11,
-            "E"
-        ],
-        [
-            9,
             7,
+            2,
             "E"
         ]
     ],
-    "numTaskFinished": 3,
-    "sumOfCost": 30,
-    "makespan": 19,
+    "numTaskFinished": 2,
+    "sumOfCost": 14,
+    "makespan": 7,
     "actualPaths": [
-        "F,F,F,F,W,F,C,F,F,W,W,F,F,F,F,W,F,R,F",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "R,W,F,F,R,W,F,F,W,F,F,T,T,T,T,T,T,T,T"
+        "C,F,F,F,F,F,F",
+        "F,W,F,F,F,F,F"
     ],
     "plannerPaths": [
-        "F,F,F,F,F,F,C,F,F,F,F,F,F,F,F,F,F,R,F",
-        "T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T",
-        "R,F,F,F,R,F,F,F,F,F,F,T,T,T,T,T,T,T,T"
+        "C,F,F,F,F,F,F",
+        "F,F,F,F,F,F,F"
     ],
     "errors": [],
     "events": [
@@ -41,22 +34,11 @@
                 "assigned"
             ],
             [
-                3,
-                0,
-                "assigned"
-            ],
-            [
                 1,
-                9,
-                "finished"
-            ],
-            [
-                3,
-                19,
+                7,
                 "finished"
             ]
         ],
-        [],
         [
             [
                 2,
@@ -65,7 +47,7 @@
             ],
             [
                 2,
-                11,
+                7,
                 "finished"
             ]
         ]
@@ -73,18 +55,13 @@
     "tasks": [
         [
             0,
-            5,
+            4,
             5
         ],
         [
             1,
-            11,
-            3
-        ],
-        [
-            2,
-            0,
-            6
+            7,
+            8
         ]
     ]
 }
