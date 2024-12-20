@@ -54,6 +54,29 @@ std::vector<double> convertStringToVector(const std::string& failureProbability)
     return result;
 }
 
+std::vector<std::pair<int, int>> parseStringToVectorOfPairs(const std::string& input) {
+    std::vector<std::pair<int, int>> result;
+    std::istringstream ss(input);
+    char ignore; // For characters like '(', ')', and ','
+
+    while (ss >> ignore) { // Read '('
+        int first, second;
+        if (ignore != '(') break; // Ensure it starts with '('
+        if (ss >> first >> ignore >> second >> ignore && ignore == ')') {
+            result.emplace_back(first, second); // Add pair to vector
+        } else {
+            break; // Stop if the format is invalid
+        }
+        ss >> ignore; // Ignore ',' or end of string
+        if (ignore != ',' && !ss.eof()) break; // Ensure proper delimiter
+    }
+
+    return result;
+}
+
+
+
+
 int main(int argc, char **argv)
 {
 #ifdef PYTHON
@@ -145,12 +168,15 @@ int main(int argc, char **argv)
     double alphaForVerify = read_param_json<double>(data, "verifyAlpha");
     double NoCollisionProbability = read_param_json<double>(data, "noCollisionProbability");
 
-    std::vector<int> agents = read_int_vec(base_folder + read_param_json<std::string>(data, "agentFile"));
+//    std::vector<int> agents = read_int_vec(base_folder + read_param_json<std::string>(data, "agentFile"));
     std::vector<int> tasks = read_int_vec(base_folder + read_param_json<std::string>(data, "taskFile"));
-    if (agents.size() > tasks.size())
-        logger->log_warning("Not enough tasks for robots (number of tasks < team size)");
+//    if (agents.size() > tasks.size())
+//        logger->log_warning("Not enough tasks for robots (number of tasks < team size)");
 
-    system_ptr = std::make_unique<AllocationByMakespan>(grid, planner, agents, tasks, model, Delay_Failure, diagnosisTime, alphaForVerify, NoCollisionProbability);
+    std::string AgentPositionString = read_param_json<std::string>(data, "AgentPosition");
+    std::vector<std::pair<int, int>> AgentPos = parseStringToVectorOfPairs(AgentPositionString);
+
+    system_ptr = std::make_unique<AllocationByMakespan>(grid, planner, AgentPos, tasks, model, Delay_Failure, diagnosisTime, alphaForVerify, NoCollisionProbability);
 
     system_ptr->set_logger(logger);
     system_ptr->set_plan_time_limit(vm["planTimeLimit"].as<int>());

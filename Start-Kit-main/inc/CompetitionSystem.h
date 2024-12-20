@@ -107,7 +107,7 @@ protected:
 class AllocationByMakespan : public BaseSystem
 {
 public:
-	AllocationByMakespan(Grid &grid, MAPFPlanner* planner, std::vector<int>& start_locs, std::vector<int>& tasks, ActionModelWithRotate* model, std::vector<double>& Delay_Failure, int diagnosisTime, double alphaForVerify, double noCollisionProbability):
+	AllocationByMakespan(Grid &grid, MAPFPlanner* planner, std::vector<std::pair<int, int>>& start_locs, std::vector<int>& tasks, ActionModelWithRotate* model, std::vector<double>& Delay_Failure, int diagnosisTime, double alphaForVerify, double noCollisionProbability):
         BaseSystem(grid, planner, model)
     {
         int task_id = 0;
@@ -119,7 +119,7 @@ public:
         starts.resize(num_of_agents);
         for (size_t i = 0; i < start_locs.size(); i++)
         {
-            starts[i] = State(start_locs[i], 0, 0);
+            starts[i] = State(start_locs[i].first, 0, start_locs[i].second);
             env->curAgents.push_back(i);
             env->lastTimeMove.push_back(0);
         }

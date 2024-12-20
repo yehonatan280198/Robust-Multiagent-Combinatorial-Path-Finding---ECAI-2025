@@ -8,6 +8,9 @@ class Node:
         self.g = 0
         self.sequence = {}
 
+    def __lt__(self, other):
+        return self.g < other.g
+
 
 class negConst:
     def __init__(self, agent, x, t):
@@ -22,7 +25,6 @@ class negConst:
 
     def __hash__(self):
         return hash((self.agent, self.x, self.t))
-
 
 class posConst:
     def __init__(self, agent1, agent2, x, t, SumTimeAndDelta):

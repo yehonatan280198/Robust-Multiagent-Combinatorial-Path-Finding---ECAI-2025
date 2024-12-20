@@ -2,8 +2,9 @@
     "mapFile": "research_map_12X12.map",
     "agentFile": "research_agents.agents",
     "taskFile": "research_tasks.tasks",
-    "delayProbability": "0.1,0.1",
+    "delayProbability": "0,0.4,0.3,0",
     "timeToDiagnosis": 150,
-    "noCollisionProbability": 0.1,
-    "verifyAlpha": 0.05
+    "noCollisionProbability": 0.6,
+    "verifyAlpha": 0.05,
+    "AgentPosition": "(3,1),(35,2),(104,3),(122,0)"
 }

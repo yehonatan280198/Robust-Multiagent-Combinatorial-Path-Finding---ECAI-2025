@@ -1,5 +1,5 @@
 import copy
-import time
+import math
 from itertools import combinations
 from queue import PriorityQueue
 import heapq
@@ -51,10 +51,14 @@ class pRobustCbss:
             # Check if a new root needs to be generated
             N = self.CheckNewRoot(N)
 
+            if N is None:
+                continue
+
             # If the paths in the current node are verified as valid, avoiding collisions with probability P, return them as the solution
             if verify(N.paths, self.delaysProb, self.no_collision_prob, self.verifyAlpha):
                 return N.paths
 
+            print("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii")
             # Identify the first conflict in the paths
             _, _, x, agent1AndTime, agent2AndTime = self.getlConflict(N)
 
@@ -69,6 +73,7 @@ class pRobustCbss:
             self.OPEN.put((A3.g, A3))
 
     def CheckNewRoot(self, N):
+        print(N.g , self.kOptimalSequences[self.num_roots_generated]["Cost"])
         # If the current node cost is within the threshold of the current optimal sequence
         if N.g <= self.kOptimalSequences[self.num_roots_generated]["Cost"]:
             return N
@@ -79,23 +84,20 @@ class pRobustCbss:
                                                                            self.num_roots_generated,
                                                                            self.num_of_cols).Solution
 
+        if self.kOptimalSequences[self.num_roots_generated]["Cost"] == math.inf:
+            return N
+
         # Create a new root node
         newRoot = Node()
         newRoot.sequence = self.kOptimalSequences[self.num_roots_generated]
         # Calculate paths and cost for the new root
         LowLevelPlan(newRoot, self.num_of_cols, self.num_of_rows, self.Positions, list(range(len(self.Positions))))
 
-        # Add the new root node to OPEN if its cost is lower or equal to the current node's cost
-        if N.g <= newRoot.g:
-            self.OPEN.put((newRoot.g, newRoot))
-            return N
-
-        # Otherwise, add the current node back to OPEN and return the new root node as the root
+        self.OPEN.put((newRoot.g, newRoot))
         self.OPEN.put((N.g, N))
-        return newRoot
+        return None
 
     def getlConflict(self, N):
-
         heap = []
         # Iterate over unique pairs of agents
         for agent1, agent2 in combinations(N.paths.keys(), 2):
@@ -171,19 +173,3 @@ class pRobustCbss:
             A.constraint[NewCons.agent2] = A.constraint[NewCons.agent2.agent] | {NewCons}
 
         return A
-
-
-# start_time = time.time()
-# p = pRobustCbss([(84, 0), (47, 0), (115, 0)], [15, 135, 6], 0.1,
-#                 {0: 0.1, 1: 0.1, 2: 0.1}, 12, 12, 0.05)
-
-# p = pRobustCbss([(8, 0)], [11, 14], 0.1,
-#                 {0: 0.1, 1: 0.1, 2: 0.1}, 12, 12, 0.05)
-
-# p = pRobustCbss([(2, 0), (4, 0), (6, 0), (8, 0), (10, 0)], [122, 124, 126, 128, 130], 0.1,
-#                 {0: 0.1, 1: 0.1, 2: 0.1, 3: 0.1, 4: 0.1}, 12, 12, 0.05)
-# end_time = time.time()
-# elapsed_time_seconds = end_time - start_time
-# print(f"Elapsed time: {elapsed_time_seconds} seconds")
-#
-# print(p.Solution)

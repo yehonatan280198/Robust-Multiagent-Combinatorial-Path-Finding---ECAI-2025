@@ -1,3 +1,4 @@
+import math
 import os
 import subprocess
 
@@ -7,6 +8,7 @@ from queue import PriorityQueue
 
 class kBestSequencing:
     def __init__(self, Positions, GoalLocations, k, num_of_cols):
+        self.Positions = Positions
         self.locations = [loc for loc, direct in Positions]             # Extract only locations, ignoring direction
         self.GoalLocations = GoalLocations                              # Locations of goals
         self.k = k                                                      # Number of optimal solutions to find
@@ -70,6 +72,8 @@ class kBestSequencing:
                 # Add the valid solution to the queue
                 self.OPEN.put((PotentialOptimalSequences["Cost"], (newIncludeE, newExcludeE, PotentialOptimalSequences)))
 
+        return {"Allocations": {}, "tour": [], "Cost": math.inf}
+
     def solveRtsp(self, includeE, excludeE):
         # Create the cost matrix
         costMatrix = self.createCostMatrix(includeE, excludeE)
@@ -101,11 +105,11 @@ class kBestSequencing:
                 elif (currLocsAndGoals[row], currLocsAndGoals[col]) in includeE:
                     cmat[row, col] = 0
                     # Special case for next initial positions
-                    if row < len(self.locations) and len(self.locations) > col == (row + 1) % len(self.locations):
+                    if row < len(self.locations) and len(self.locations) > col == (row + 1) % len(self.locations) or row >= len(self.locations) > col:
                         self.includedEdgesRealCost[(currLocsAndGoals[row], currLocsAndGoals[col])] = 0
                     # Calculate Manhattan distance as the real cost
                     else:
-                        self.includedEdgesRealCost[(currLocsAndGoals[row], currLocsAndGoals[col])] = self.calculateManhattanDistance(currLocsAndGoals[row], currLocsAndGoals[col])
+                        self.includedEdgesRealCost[(currLocsAndGoals[row], currLocsAndGoals[col])] = self.precomputed_distances[(row, col)]
 
                 # If the edge is in the exclude set, assign a high cost to prohibit its use
                 elif (currLocsAndGoals[row], currLocsAndGoals[col]) in excludeE:
@@ -207,7 +211,25 @@ class kBestSequencing:
         # loc2 divided by num_of_cols gives row2, remainder gives col2
         row2, col2 = divmod(loc2, self.num_of_cols)
         # Compute Manhattan distance
-        return abs(row1 - row2) + abs(col1 - col2)
+        if not (loc1 in self.locations and loc2 in self.GoalLocations):
+            return abs(row1 - row2) + abs(col1 - col2)
+
+        dist = abs(row1 - row2) + abs(col1 - col2)
+
+        up_or_down = 3 if row1 > row2 else (1 if row1 < row2 else -1)
+        left_or_right = 2 if col1 > col2 else (0 if col1 < col2 else -1)
+
+        CurPosition = next((tup for tup in self.Positions if tup[0] == loc1), None)
+
+        if (CurPosition[1] == up_or_down or CurPosition[1] == left_or_right) and up_or_down != -1 and left_or_right != -1:
+            return dist + 1
+
+        elif up_or_down == -1 or left_or_right == -1:
+            goalDirect = max(up_or_down, left_or_right)
+            countRotate = abs(goalDirect - CurPosition[1]) if abs(goalDirect - CurPosition[1]) != 3 else 1
+            return dist + countRotate
+
+        return dist + 2
 
 
-# print(kBestSequencing([(2, 0), (4, 0), (6, 0), (8, 0), (10, 0)], [122, 124, 126, 128, 130], 1, 12).Solution)
+# p = kBestSequencing([(5,3),(7,2),(64,2)], [61, 117, 87, 49, 45], 1, 12).Solution
