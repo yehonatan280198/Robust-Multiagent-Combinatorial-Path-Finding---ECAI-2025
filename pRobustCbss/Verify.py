@@ -1,5 +1,7 @@
 import math
 import random
+from itertools import combinations
+
 from scipy.stats import norm
 
 
@@ -18,13 +20,14 @@ def run_s_simulations(s0, paths, delaysProb):
 
         while active_agents:
             # Set to track current agent locations
-            locs = set()
+            locsAndEdge = set()
             # Set to track agents that have completed their paths
             agents_to_remove = set()
 
             for agent in list(active_agents):
                 # Current path of the agent
                 path = paths_copy[agent]
+                lastLoc = path[0][0]
 
                 # Simulate agent movement with a delay probability
                 if random.random() > delaysProb[agent]:
@@ -34,10 +37,11 @@ def run_s_simulations(s0, paths, delaysProb):
                 # Current location of the agent
                 loc = path[0][0]
                 # Check for collision
-                if loc in locs:
+                if loc in locsAndEdge or (loc, lastLoc) in locsAndEdge:
                     collision = True
                     break
-                locs.add(loc)
+                locsAndEdge.add(loc)
+                locsAndEdge.add((lastLoc, loc))
 
                 # If the agent has reached its destination, mark it for removal
                 if len(path) == 1:
@@ -85,3 +89,47 @@ def verify(paths, delaysProb, no_collision_prob, verifyAlpha):
         # If no decision, add one more simulation
         more_simulation += 1
         count_success += run_s_simulations(more_simulation, paths, delaysProb)
+
+
+def verifyOriginal(paths, delaysProb, no_collision_prob, verifyAlpha):
+    for agent1, agent2 in combinations(paths.keys(), 2):
+        path1 = paths[agent1]
+        path2 = paths[agent2]
+
+        # Create loc-time dictionaries
+        locTimes1 = {}
+        for i, (loc, _) in enumerate(path1):
+            if loc not in locTimes1:
+                locTimes1[(i, loc)] = (i, loc)
+
+        locTimes2 = {}
+        for i, (loc, _) in enumerate(path2):
+            if loc not in locTimes2:
+                locTimes2[(i, loc)] = (i, loc)
+
+        # Detect location conflicts
+        common_locs = locTimes1.keys() & locTimes2.keys()
+        if len(common_locs) != 0:
+            return False
+
+        # Create edge-time dictionaries
+        edgeTimes1 = {}
+        for i in range(len(path1) - 1):
+            edge = (path1[i][0], path1[i + 1][0])
+            if edge not in edgeTimes1:
+                edgeTimes1[(i + 1, edge)] = (i + 1, edge)
+
+        edgeTimes2 = {}
+        for i in range(len(path2) - 1):
+            edge = (path2[i][0], path2[i + 1][0])
+            if edge not in edgeTimes2:
+                edgeTimes2[(i + 1, edge)] = (i + 1, edge)
+
+        # Detect edge conflicts, including reversed edges
+        for time1, edge1 in edgeTimes1.values():
+            reversed_edge1 = (edge1[1], edge1[0])
+            if (time1, reversed_edge1) in edgeTimes2:
+                return False
+
+    return True
+

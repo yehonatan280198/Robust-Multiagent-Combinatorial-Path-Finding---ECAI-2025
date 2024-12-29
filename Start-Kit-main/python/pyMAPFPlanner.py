@@ -44,7 +44,7 @@ class pyMAPFPlanner:
         locations = [(self.env.curr_states[agent].location, self.env.curr_states[agent].orientation) for agent in currentAgents]
         taskLocs = [task.location for task in self.env.unfinishedTasks]
         delaysProb = {i: self.env.FailureProbability[agent] for i, agent in enumerate(currentAgents)}
-        self.paths = pRobustCbss(locations, taskLocs, self.env.NoCollisionProbability, delaysProb, self.env.cols, self.env.rows, self.env.verifyAlpha).Solution
+        self.paths = pRobustCbss(locations, taskLocs, self.env.NoCollisionProbability, delaysProb, self.env.cols, self.env.rows, self.env.verifyAlpha,False, True, True).Solution
 
         goal_locations = [[] for _ in range(len(currentAgents))]
         for agent, path in self.paths.items():

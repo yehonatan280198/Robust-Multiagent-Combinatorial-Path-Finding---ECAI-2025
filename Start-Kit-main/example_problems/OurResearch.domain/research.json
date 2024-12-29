@@ -6,5 +6,5 @@
     "timeToDiagnosis": 150,
     "noCollisionProbability": 0.6,
     "verifyAlpha": 0.05,
-    "AgentPosition": "(3,1),(35,2),(104,3),(122,0)"
+    "AgentPosition": "(5,1),(31,2),(51,0)"
 }

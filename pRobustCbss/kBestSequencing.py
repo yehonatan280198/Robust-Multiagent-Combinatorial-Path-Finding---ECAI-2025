@@ -7,7 +7,7 @@ from queue import PriorityQueue
 
 
 class kBestSequencing:
-    def __init__(self, Positions, GoalLocations, k, num_of_cols):
+    def __init__(self, Positions, GoalLocations, k, num_of_cols, rotate):
         self.Positions = Positions
         self.locations = [loc for loc, direct in Positions]             # Extract only locations, ignoring direction
         self.GoalLocations = GoalLocations                              # Locations of goals
@@ -17,12 +17,17 @@ class kBestSequencing:
         self.OPEN = PriorityQueue()                                     # Priority queue for exploring k-best solutions
         self.includedEdgesRealCost = {}                                 # Stores real costs for included edges
 
+        self.rotate = rotate
+
         # Precompute Manhattan distances between all points
         self.precomputed_distances = {}
         currLocsAndGoals = self.locations + self.GoalLocations
         for i, loc1 in enumerate(currLocsAndGoals):
             for j, loc2 in enumerate(currLocsAndGoals):
-                self.precomputed_distances[(i, j)] = self.calculateManhattanDistance(loc1, loc2)
+                if self.rotate:
+                    self.precomputed_distances[(i, j)] = self.calculateManhattanDistance(loc1, loc2)
+                else:
+                    self.precomputed_distances[(i, j)] = self.calculateManhattanDistanceOriginal(loc1, loc2)
 
         # Run the algorithm
         self.Solution = self.run()
@@ -58,6 +63,7 @@ class kBestSequencing:
                 newIncludeE = includeE | set(indexEdges[:index])
                 # Add the current edge to exclude set
                 newExcludeE = excludeE | {indexEdges[index]}
+
                 # Solve again
                 PotentialOptimalSequences = self.solveRtsp(newIncludeE, newExcludeE)
 
@@ -103,7 +109,7 @@ class kBestSequencing:
 
                 # If the edge is in the include set, its cost is zero
                 elif (currLocsAndGoals[row], currLocsAndGoals[col]) in includeE:
-                    cmat[row, col] = 0
+                    cmat[row, col] = -99999
                     # Special case for next initial positions
                     if row < len(self.locations) and len(self.locations) > col == (row + 1) % len(self.locations) or row >= len(self.locations) > col:
                         self.includedEdgesRealCost[(currLocsAndGoals[row], currLocsAndGoals[col])] = 0
@@ -201,7 +207,8 @@ class kBestSequencing:
 
             # Adjust cost for included edges
             for loc in mtsp_tours["tour"]:
-                mtsp_tours["Cost"] += self.includedEdgesRealCost.get(loc, 0)
+                if loc in self.includedEdgesRealCost:
+                    mtsp_tours["Cost"] += (self.includedEdgesRealCost[loc] + 99999)
 
         return mtsp_tours
 
@@ -231,5 +238,15 @@ class kBestSequencing:
 
         return dist + 2
 
+    def calculateManhattanDistanceOriginal(self, loc1, loc2):
+        # loc1 divided by num_of_cols gives row1, remainder gives col1
+        row1, col1 = divmod(loc1, self.num_of_cols)
+        # loc2 divided by num_of_cols gives row2, remainder gives col2
+        row2, col2 = divmod(loc2, self.num_of_cols)
+        # Compute Manhattan distance
+        return abs(row1 - row2) + abs(col1 - col2)
 
-# p = kBestSequencing([(5,3),(7,2),(64,2)], [61, 117, 87, 49, 45], 1, 12).Solution
+
+p = kBestSequencing([(5, 1), (31, 2), (51, 0)], [29, 53], 12, 12, False).Solution
+
+print(p)

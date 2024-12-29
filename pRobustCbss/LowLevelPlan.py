@@ -4,13 +4,15 @@ from pRobustCbss.StateForLowLevel import State
 
 
 class LowLevelPlan:
-    def __init__(self, Node, num_of_cols, num_of_rows, Positions, agent_that_need_update_path):
+    def __init__(self, Node, num_of_cols, num_of_rows, Positions, agent_that_need_update_path, rotate):
         self.Node = Node                                                                            # Goal allocations for agents
         self.num_of_cols = num_of_cols                                                              # Grid columns
         self.num_of_rows = num_of_rows                                                              # Grid rows
         self.Positions = Positions                                                                  # Initial agent locations
         self.agent_that_need_update_path = agent_that_need_update_path
         self.goal_heuristics = {}
+
+        self.rotate = rotate
 
         self.run()
 
@@ -50,7 +52,10 @@ class LowLevelPlan:
                         break
 
                     # Get neighbors and add them to the open list
-                    neighbors = self.GetNeighbors(S, agent)
+                    if self.rotate:
+                        neighbors = self.GetNeighbors(S, agent)
+                    else:
+                        neighbors = self.GetNeighborsOriginal(S, agent)
                     for Sl in neighbors:
                         f_val = self.calc_heuristic_value(Sl.CurPosition, goal) + Sl.g
                         OpenList.put((f_val, Sl))
@@ -134,18 +139,18 @@ class LowLevelPlan:
 
     def validateMove(self, loc_after_move, agent, state):
         # Extract the agent's location and direction before taking the next step
-        loc, direct = state.CurPosition
+        loc, _ = state.CurPosition
 
         # If the agent is at the top or bottom boundary, it cannot move up or down
         if not (0 <= loc_after_move < self.num_of_cols * self.num_of_rows):
             return False
 
         # If the agent is at the right boundary, it cannot move right
-        if loc % self.num_of_cols == self.num_of_cols - 1 and direct == 0:
+        if loc % self.num_of_cols == self.num_of_cols - 1 and loc_after_move % self.num_of_cols == 0:
             return False
 
-        # If the agent is at the right boundary, it cannot move right
-        if loc % self.num_of_cols == 0 and direct == 2:
+        # If the agent is at the left boundary, it cannot move left
+        if loc % self.num_of_cols == 0 and loc_after_move % self.num_of_cols == self.num_of_cols - 1:
             return False
 
         # Check if the move violates any negative constraints
@@ -162,6 +167,22 @@ class LowLevelPlan:
                     return False
 
         return True
+
+    def GetNeighborsOriginal(self, state, agent):
+        neighbors = set()
+        loc, direct = state.CurPosition
+
+        candidates = [loc + 1, loc + self.num_of_cols, loc - 1, loc - self.num_of_cols]
+
+        for loc_after_move in candidates:
+            if self.validateMove(loc_after_move, agent, state):
+                neighbors.add(State((loc_after_move, direct), state.g + 1, state))
+
+        return neighbors
+
+
+
+
 
 
 

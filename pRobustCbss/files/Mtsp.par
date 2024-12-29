@@ -1,4 +1,4 @@
-PROBLEM_FILE = files/Mtsp.tsp
+PROBLEM_FILE = files/Mtsp.gtsp
 MOVE_TYPE = 5
 PATCHING_C = 3
 PATCHING_A = 2
