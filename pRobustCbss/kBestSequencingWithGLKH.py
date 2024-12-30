@@ -33,7 +33,7 @@ class kBestSequencingWithGLKH:
         self.num_of_cols = num_of_cols                                      # Number of columns in the grid
 
         self.OPEN = PriorityQueue()                                         # Priority queue for exploring k-best solutions
-        self.included_edges_real_cost = defaultdict(int)                       # Stores real costs for included edges
+        self.included_edges_real_cost = set()                       # Stores real costs for included edges
         self.minDist = defaultdict(lambda: 99999)
 
         # Precompute Manhattan distances between all points
@@ -60,7 +60,6 @@ class kBestSequencingWithGLKH:
             _, (includeE, excludeE, optimalSequences) = self.OPEN.get()
             # Append the optimal sequence to results
             S.append(optimalSequences)
-            print(optimalSequences)
 
             # Stop if k solutions are found
             if len(S) == k:
@@ -68,24 +67,24 @@ class kBestSequencingWithGLKH:
                 return S[k - 1]
 
             # Generate new potential solutions by varying include/exclude sets
-            EdgeOnTourAndTheirCost = list(optimalSequences["tour"].items())
-            for index in range(len(EdgeOnTourAndTheirCost)):
-                self.included_edges_real_cost = defaultdict(int)
+            for index in range(len(optimalSequences["tour"])):
+                self.included_edges_real_cost = set()
                 # Add edges to include set
-                newIncludeE = includeE | set(EdgeOnTourAndTheirCost[:index])
-                for CurrEdge, CurrCost in newIncludeE:
-                    self.included_edges_real_cost[CurrEdge] = CurrCost
+                newIncludeE = includeE | set(optimalSequences["tour"][:index])
+                for CurrEdge in newIncludeE:
+                    self.included_edges_real_cost.add(CurrEdge)
                 # Add the current edge to exclude set
-                newExcludeE = excludeE | {EdgeOnTourAndTheirCost[index]}
+                newExcludeE = excludeE | {(optimalSequences["tour"][index][0][0], optimalSequences["tour"][index][1][0])}
                 # Solve again
                 PotentialOptimalSequences = self.solveRtsp(newIncludeE, newExcludeE)
 
                 # Validate the new solution by ensuring it respects include/exclude constraints
-                if not all(edge in PotentialOptimalSequences["tour"] for edge, _ in newIncludeE):
+                if not all(edge in PotentialOptimalSequences["tour"] for edge in newIncludeE):
                     continue
 
                 # Validate the new solution by ensuring it respects include/exclude constraints
-                if any(edge in PotentialOptimalSequences["tour"] for edge, _ in newExcludeE):
+                OnlyEdgeOfLocInTour = [(startPos[0], endPos[0]) for startPos, endPos in PotentialOptimalSequences["tour"]]
+                if any(edge in OnlyEdgeOfLocInTour for edge in newExcludeE):
                     continue
 
                 # Add the valid solution to the queue
@@ -145,15 +144,17 @@ class kBestSequencingWithGLKH:
 
     def createCostMatrix(self, includeE, excludeE):
         cmat = np.zeros((len(self.AllPosAndArtGoals), len(self.AllPosAndArtGoals)))
-        includeE = [edge for edge, _ in includeE]
-        excludeE = [edge for edge, _ in excludeE]
         for row, (rowLoc, rowDirect) in enumerate(self.AllPosAndArtGoals):
             for col, (colLoc, colDirect) in enumerate(self.AllPosAndArtGoals):
 
-                RealEdge = (rowLoc, colLoc)
                 # if not same location
                 if rowLoc != colLoc:
-                    cmat[row, col] = -99999 if RealEdge in includeE else 99999 if RealEdge in excludeE else self.precomputed_distances[((rowLoc, rowDirect), (colLoc, colDirect))]
+                    if ((rowLoc, rowDirect), (colLoc, colDirect)) in includeE:
+                        cmat[row, col] = -99999
+                    elif (rowLoc, colLoc) in excludeE:
+                        cmat[row, col] = 99999
+                    else:
+                        cmat[row, col] = self.precomputed_distances[((rowLoc, rowDirect), (colLoc, colDirect))]
 
         return cmat
 
@@ -190,7 +191,7 @@ class kBestSequencingWithGLKH:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process.wait()
 
-        mtsp_tours = {"Allocations": {}, "tour": {}}
+        mtsp_tours = {"Allocations": {}, "tour": []}
 
         with open("files/Mtsp.tour", mode="r") as fres:
             lines = fres.readlines()
@@ -225,22 +226,14 @@ class kBestSequencingWithGLKH:
             # Add the final agent's tour
             mtsp_tours["Allocations"][agent] = currAgentTour
             # Create tour as pairs of locations
-            mtsp_tours["tour"] = {(tour[i][0], tour[i+1][0]): self.precomputed_distances[(tour[i], tour[i+1])] for i in range(len(tour) - 1)}
-            withDirTour = [(tour[i], tour[i + 1]) for i in range(len(tour) - 1)]
+            mtsp_tours["tour"] = [(tour[i], tour[i+1]) for i in range(len(tour) - 1)]
 
-            edgesOnTour = list(mtsp_tours["tour"].keys())
-            # Adjust cost for included edges
-            for index, CurrEdge in enumerate(edgesOnTour):
+            for index, CurrEdge in enumerate(mtsp_tours["tour"]):
                 if CurrEdge in self.included_edges_real_cost:
-                    if any(CurrEdge[1] == CurrExcludeEdge[0] for CurrExcludeEdge, cost in excludeE):
-                        if edgesOnTour[index + 1][1] in self.OnlyLocOfPosition:
-                            mtsp_tours["tour"][CurrEdge] = self.minDist[(withDirTour[index][0], withDirTour[index][1][0])]
-                        else:
-                            mtsp_tours["tour"][CurrEdge] = self.findCost(withDirTour[index][0][1], CurrEdge, edgesOnTour[index + 1], mtsp_tours["tour"][edgesOnTour[index + 1]])
+                    if mtsp_tours["tour"][index + 1][1][0] in self.OnlyLocOfPosition:
+                        mtsp_tours["Cost"] += (self.minDist[(mtsp_tours["tour"][index][0], mtsp_tours["tour"][index][1][0])] + 99999)
                     else:
-                        mtsp_tours["tour"][CurrEdge] = self.included_edges_real_cost[CurrEdge]
-
-                    mtsp_tours["Cost"] += (mtsp_tours["tour"][CurrEdge] + 99999)
+                        mtsp_tours["Cost"] += (self.precomputed_distances[CurrEdge] + 99999)
 
         return mtsp_tours
 
@@ -270,20 +263,14 @@ class kBestSequencingWithGLKH:
 
         return precomputed_distances
 
-    def findCost(self, direct, CurrEdge, NextEdge, CostNexEdge):
-        best = math.inf
-        for i in range(4):
-            for j in range(4):
-                if self.precomputed_distances.get(((NextEdge[0], i), (NextEdge[1], j)), -1) == CostNexEdge:
-                    best = min(best, self.precomputed_distances[((CurrEdge[0], direct), (NextEdge[0], i))])
-        return best
-
 
 p = kBestSequencingWithGLKH([(5, 1), (31, 2), (51, 0)], [29, 53], 12, 12).Solution
 
-# p = kBestSequencingWithGLKH([(50,0), (89,3)], [17, 56], 6, 12).Solution
+# p = kBestSequencingWithGLKH([(50,0), (89,3)], [17, 56], 7, 12).Solution
 
-# print(p)
+# p = kBestSequencingWithGLKH([(74,0)], [41, 80, 5], 10, 12).Solution
+
+print(p)
 
 
 
