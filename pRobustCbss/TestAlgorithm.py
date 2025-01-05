@@ -1,52 +1,68 @@
 import random
+import time
 
 from collections import defaultdict
 from multiprocessing import Process, Queue
-
 from pRobustCbss.Run_pRobustCbss import pRobustCbss
 
-def run_pRobustCbss(queue, Positions, GoalLocations, no_collision_prob, delaysProb, rows, cols, verifyAlpha, OriginalCheckRoot, rotate, prob):
-    """Wrap the pRobustCbss execution in a separate process."""
 
-    p = pRobustCbss(Positions, GoalLocations, no_collision_prob, delaysProb, rows, cols, verifyAlpha, OriginalCheckRoot, rotate, prob)
+def create_map():
+    file_path = "/home/yonikid/Desktop/SimulatorAgents/Start-Kit-main/example_problems/OurResearch.domain/empty-32-32.map"
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+    map_start_index = lines.index("map\n") + 1
+    map_lines = lines[map_start_index:]
+    currMap = [0 if char == "." else 1 for line in map_lines for char in line.strip()]
+    return {"Rows": 32, "Cols": 32, "Map": currMap}
+
+
+def create_positions_for_agents_And_Locs_For_Goals(NumAgents, NumGoals, MapAndDim):
+    zero_indices = [i for i, value in enumerate(MapAndDim["Map"]) if value == 0]
+    chosen_indices_for_agents = random.sample(zero_indices, NumAgents)
+    position_for_agents = [(num, random.randint(0, 3)) for num in chosen_indices_for_agents]
+
+    chosen_set = set(chosen_indices_for_agents)
+    remaining_indices_for_goals = [idx for idx in zero_indices if idx not in chosen_set]
+    location_for_agents = random.sample(remaining_indices_for_goals, NumGoals)
+
+    return position_for_agents, location_for_agents
+
+
+def run_pRobustCbss(queue, Positions, GoalLocations, no_collision_prob, delaysProb, dict_of_map_and_dim, verifyAlpha):
+
+    p = pRobustCbss(Positions, GoalLocations, no_collision_prob, delaysProb, dict_of_map_and_dim, verifyAlpha)
     queue.put(dict(p.Solution))
 
 
 # cases = [[True, False, False], [False, False, False], [False, True, False], [False, False, True], [False, True, True]]
-cases = [[False, True, False], [False, True, True]]
+# cases = [[False, True, False], [False, True, True]]
 
-size_of_grid = [20, 20]
-num_of_agentsList = [3, 5, 5, 10, 15, 20]
-num_of_goalsList = [5, 7, 10, 20, 30, 50]
+
+mapAndDim = create_map()
+num_of_agentsList = [3, 5, 10, 15, 20, 25]
+num_of_goalsList = [6, 10, 20, 30, 40, 50]
 no_collision_prob = 0.6
 verifyAlpha = 0.05
-samples = 5
-max_time = 60
+samples = 10
+max_time = 120
 
-dict_of_successes = defaultdict(int)
-for iteration in range(6):
-    num_of_agents = num_of_agentsList[iteration]
-    num_of_goals = num_of_goalsList[iteration]
-    delaysProb = {i: 0.1 for i in range(num_of_agents)}
+dict_of_successes = defaultdict(lambda: [0, 0])
 
-    for sample in range(samples):
-        Positions = [(num, random.randint(0, 3)) for num in
-                     random.sample(range(size_of_grid[0] * size_of_grid[1]), num_of_agents)]
 
-        excluded_numbers = {t[0] for t in Positions}
-        available_numbers = [num for num in range(size_of_grid[0] * size_of_grid[1]) if num not in excluded_numbers]
-        GoalLocations = random.sample(available_numbers, num_of_goals)
+for numAgents in num_of_agentsList:
+    for numGoals in num_of_goalsList:
+        delaysProb = {i: 0.1 for i in range(numAgents)}
 
-        print("Positions:", Positions)
-        print("GoalLocations:", GoalLocations)
+        for sample in range(samples):
+            AgentsPositions, GoalsLocations = create_positions_for_agents_And_Locs_For_Goals(numAgents, numGoals, mapAndDim)
+            print("AgentsPositions:", AgentsPositions)
+            print("GoalsLocations:", GoalsLocations)
 
-        for i, case in enumerate(cases):
             successful_runs = True
 
             queue = Queue()
-            process = Process(target=run_pRobustCbss, args=(
-                queue, Positions, GoalLocations, no_collision_prob, delaysProb, size_of_grid[0], size_of_grid[1], verifyAlpha, case[0], case[1], case[2]))
-
+            start_time = time.time()
+            process = Process(target=run_pRobustCbss, args=(queue, AgentsPositions, GoalsLocations, no_collision_prob, delaysProb, mapAndDim, verifyAlpha))
             process.start()
             process.join(timeout=max_time)
 
@@ -58,14 +74,20 @@ for iteration in range(6):
                 successful_runs = False
                 continue
 
+            end_time = time.time()
+            elapsed_time = round(end_time - start_time,2)
+
+
             # If the process completed in time, retrieve the solution
             solution = queue.get()
             print("Solution:", solution)
             print("--------------------------------------------------------------------------")
 
             if successful_runs:
-                dict_of_successes[(i, num_of_agents, num_of_goals)] += 1
+                dict_of_successes[(numAgents, numGoals)][0] += 1
+                dict_of_successes[(numAgents, numGoals)][1] += elapsed_time
 
-    print(dict_of_successes)
+        if dict_of_successes[(numAgents, numGoals)][0] > 0:
+            dict_of_successes[(numAgents, numGoals)][1] = dict_of_successes[(numAgents, numGoals)][1] / dict_of_successes[(numAgents, numGoals)][0]
 
-
+        print(dict_of_successes)

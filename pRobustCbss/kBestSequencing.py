@@ -247,6 +247,6 @@ class kBestSequencing:
         return abs(row1 - row2) + abs(col1 - col2)
 
 
-p = kBestSequencing([(5, 1), (31, 2), (51, 0)], [29, 53], 12, 12, False).Solution
-
-print(p)
+# p = kBestSequencing([(5, 1), (31, 2), (51, 0)], [29, 53], 12, 12, False).Solution
+#
+# print(p)

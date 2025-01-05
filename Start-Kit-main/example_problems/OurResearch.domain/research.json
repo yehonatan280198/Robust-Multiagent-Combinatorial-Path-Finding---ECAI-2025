@@ -1,10 +1,9 @@
 {
-    "mapFile": "research_map_12X12.map",
-    "agentFile": "research_agents.agents",
-    "taskFile": "research_tasks.tasks",
-    "delayProbability": "0,0.4,0.3,0",
+    "mapFile": "empty-32-32.map",
+    "delayProbability": "0,0,0",
     "timeToDiagnosis": 150,
     "noCollisionProbability": 0.6,
     "verifyAlpha": 0.05,
-    "AgentPosition": "(5,1),(31,2),(51,0)"
+    "AgentPosition": "(5,1),(31,2),(51,0)",
+    "GoalLocation": "29,53"
 }

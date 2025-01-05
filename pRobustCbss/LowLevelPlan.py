@@ -1,18 +1,17 @@
 from queue import PriorityQueue
-from pRobustCbss.NodeAndConstClass import negConst, posConst
-from pRobustCbss.StateForLowLevel import State
+from pRobustCbss.NodeStateConstClasses import negConst, posConst
+from pRobustCbss.NodeStateConstClasses import State
 
 
 class LowLevelPlan:
-    def __init__(self, Node, num_of_cols, num_of_rows, Positions, agent_that_need_update_path, rotate):
+    def __init__(self, Node, dict_of_map_and_dim, Positions, agent_that_need_update_path):
         self.Node = Node                                                                            # Goal allocations for agents
-        self.num_of_cols = num_of_cols                                                              # Grid columns
-        self.num_of_rows = num_of_rows                                                              # Grid rows
+        self.dict_of_map_and_dim = dict_of_map_and_dim
         self.Positions = Positions                                                                  # Initial agent locations
         self.agent_that_need_update_path = agent_that_need_update_path
         self.goal_heuristics = {}
 
-        self.rotate = rotate
+        # self.rotate = rotate
 
         self.run()
 
@@ -52,10 +51,9 @@ class LowLevelPlan:
                         break
 
                     # Get neighbors and add them to the open list
-                    if self.rotate:
-                        neighbors = self.GetNeighbors(S, agent)
-                    else:
-                        neighbors = self.GetNeighborsOriginal(S, agent)
+                    neighbors = self.GetNeighbors(S, agent)
+                    # else:
+                    #     neighbors = self.GetNeighborsOriginal(S, agent)
                     for Sl in neighbors:
                         f_val = self.calc_heuristic_value(Sl.CurPosition, goal) + Sl.g
                         OpenList.put((f_val, Sl))
@@ -81,9 +79,9 @@ class LowLevelPlan:
             return self.goal_heuristics[item]
 
         # cur_location divided by num_of_cols gives CurRow, remainder gives CurCol
-        CurRow, CurCol = divmod(CurPosition[0], self.num_of_cols)
+        CurRow, CurCol = divmod(CurPosition[0], self.dict_of_map_and_dim["Cols"])
         # goal divided by num_of_cols gives GoalRow, remainder gives GoalCol
-        GoalRow, GoalCol = divmod(goal, self.num_of_cols)
+        GoalRow, GoalCol = divmod(goal, self.dict_of_map_and_dim["Cols"])
         # Compute Manhattan distance
         time = abs(CurRow - GoalRow) + abs(CurCol - GoalCol)
 
@@ -117,7 +115,7 @@ class LowLevelPlan:
         loc, direct = state.CurPosition
 
         # Define movement candidates for the agent
-        candidates = [loc + 1, loc + self.num_of_cols, loc - 1, loc - self.num_of_cols]
+        candidates = [loc + 1, loc + self.dict_of_map_and_dim["Cols"], loc - 1, loc - self.dict_of_map_and_dim["Cols"]]
 
         # Try moving in the current direction
         loc_after_move = candidates[direct]
@@ -142,15 +140,18 @@ class LowLevelPlan:
         loc, _ = state.CurPosition
 
         # If the agent is at the top or bottom boundary, it cannot move up or down
-        if not (0 <= loc_after_move < self.num_of_cols * self.num_of_rows):
+        if not (0 <= loc_after_move < self.dict_of_map_and_dim["Cols"] * self.dict_of_map_and_dim["Rows"]):
             return False
 
         # If the agent is at the right boundary, it cannot move right
-        if loc % self.num_of_cols == self.num_of_cols - 1 and loc_after_move % self.num_of_cols == 0:
+        if loc % self.dict_of_map_and_dim["Cols"] == self.dict_of_map_and_dim["Cols"] - 1 and loc_after_move % self.dict_of_map_and_dim["Cols"] == 0:
             return False
 
         # If the agent is at the left boundary, it cannot move left
-        if loc % self.num_of_cols == 0 and loc_after_move % self.num_of_cols == self.num_of_cols - 1:
+        if loc % self.dict_of_map_and_dim["Cols"] == 0 and loc_after_move % self.dict_of_map_and_dim["Cols"] == self.dict_of_map_and_dim["Cols"] - 1:
+            return False
+
+        if self.dict_of_map_and_dim["Map"][loc_after_move] != 0:
             return False
 
         # Check if the move violates any negative constraints
@@ -168,17 +169,17 @@ class LowLevelPlan:
 
         return True
 
-    def GetNeighborsOriginal(self, state, agent):
-        neighbors = set()
-        loc, direct = state.CurPosition
-
-        candidates = [loc + 1, loc + self.num_of_cols, loc - 1, loc - self.num_of_cols]
-
-        for loc_after_move in candidates:
-            if self.validateMove(loc_after_move, agent, state):
-                neighbors.add(State((loc_after_move, direct), state.g + 1, state))
-
-        return neighbors
+    # def GetNeighborsOriginal(self, state, agent):
+    #     neighbors = set()
+    #     loc, direct = state.CurPosition
+    #
+    #     candidates = [loc + 1, loc + self.dict_of_map_and_dim["Cols"], loc - 1, loc - self.dict_of_map_and_dim["Cols"]]
+    #
+    #     for loc_after_move in candidates:
+    #         if self.validateMove(loc_after_move, agent, state):
+    #             neighbors.add(State((loc_after_move, direct), state.g + 1, state))
+    #
+    #     return neighbors
 
 
 

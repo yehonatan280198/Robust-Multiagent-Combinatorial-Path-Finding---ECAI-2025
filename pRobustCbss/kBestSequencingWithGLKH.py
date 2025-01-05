@@ -2,9 +2,10 @@ import math
 import os
 import subprocess
 from collections import defaultdict
-
 import numpy as np
 from queue import PriorityQueue
+
+from pRobustCbss.NodeStateConstClasses import State
 
 
 def generateMtspPar():
@@ -25,22 +26,20 @@ def createCopyOfGoals(GoalLocations):
 
 
 class kBestSequencingWithGLKH:
-    def __init__(self, Positions, GoalLocations, k, num_of_cols):
+    def __init__(self, Positions, GoalLocations, dict_of_map_and_dim):
         self.Positions = Positions
         self.OnlyLocOfPosition = [pos for pos, _ in Positions]
         self.AllPosAndArtGoals = self.Positions + createCopyOfGoals(GoalLocations)
+        self.MapAndDims = dict_of_map_and_dim  # Number of columns in the grid
 
-        self.num_of_cols = num_of_cols                                      # Number of columns in the grid
-
-        self.OPEN = PriorityQueue()                                         # Priority queue for exploring k-best solutions
-        self.included_edges_real_cost = set()                       # Stores real costs for included edges
+        self.OPEN = PriorityQueue()                                                             # Priority queue for exploring k-best solutions
+        self.included_edges_real_cost = set()                                                   # Stores real costs for included edges
         self.minDist = defaultdict(lambda: 99999)
 
         # Precompute Manhattan distances between all points
+        self.dp_cache = {}
         self.precomputed_distances = self.precompute_all_costs()
 
-        # Run the algorithm
-        self.Solution = self.run(k)
 
     def run(self, k):
         current_dir = os.getcwd()
@@ -60,6 +59,7 @@ class kBestSequencingWithGLKH:
             _, (includeE, excludeE, optimalSequences) = self.OPEN.get()
             # Append the optimal sequence to results
             S.append(optimalSequences)
+            print(optimalSequences)
 
             # Stop if k solutions are found
             if len(S) == k:
@@ -74,7 +74,8 @@ class kBestSequencingWithGLKH:
                 for CurrEdge in newIncludeE:
                     self.included_edges_real_cost.add(CurrEdge)
                 # Add the current edge to exclude set
-                newExcludeE = excludeE | {(optimalSequences["tour"][index][0][0], optimalSequences["tour"][index][1][0])}
+                newExcludeE = excludeE | {
+                    (optimalSequences["tour"][index][0][0], optimalSequences["tour"][index][1][0])}
                 # Solve again
                 PotentialOptimalSequences = self.solveRtsp(newIncludeE, newExcludeE)
 
@@ -83,25 +84,29 @@ class kBestSequencingWithGLKH:
                     continue
 
                 # Validate the new solution by ensuring it respects include/exclude constraints
-                OnlyEdgeOfLocInTour = [(startPos[0], endPos[0]) for startPos, endPos in PotentialOptimalSequences["tour"]]
+                OnlyEdgeOfLocInTour = [(startPos[0], endPos[0]) for startPos, endPos in
+                                       PotentialOptimalSequences["tour"]]
                 if any(edge in OnlyEdgeOfLocInTour for edge in newExcludeE):
                     continue
 
                 # Add the valid solution to the queue
-                self.OPEN.put((PotentialOptimalSequences["Cost"], (newIncludeE, newExcludeE, PotentialOptimalSequences)))
+                self.OPEN.put(
+                    (PotentialOptimalSequences["Cost"], (newIncludeE, newExcludeE, PotentialOptimalSequences)))
 
         return {"Allocations": {}, "tour": [], "Cost": math.inf}
 
-    def calculate_heuristic_value(self, pos1, pos2):
+    def calculate_heuristic_cost_between_positions(self, pos1, pos2):
         loc1, direct1 = pos1
         loc2, direct2 = pos2
 
         # loc1 divided by num_of_cols gives row1, remainder gives col1
-        row1, col1 = divmod(loc1, self.num_of_cols)
+        row1, col1 = divmod(loc1, self.MapAndDims["Cols"])
         # loc2 divided by num_of_cols gives row2, remainder gives col2
-        row2, col2 = divmod(loc2, self.num_of_cols)
+        row2, col2 = divmod(loc2, self.MapAndDims["Cols"])
         # Compute Manhattan distance
         ManhattanDistance = abs(row1 - row2) + abs(col1 - col2)
+
+        return ManhattanDistance
 
         # Determines vertical movement:
         up_or_down = 3 if row1 > row2 else (1 if row1 < row2 else -1)
@@ -112,7 +117,8 @@ class kBestSequencingWithGLKH:
         if (direct1 == up_or_down or direct1 == left_or_right) and up_or_down != -1 and left_or_right != -1:
             agentDirectionAtGoal = left_or_right if direct1 == up_or_down else up_or_down
             # Calculate the number of turns needed while on the target to face its required direction
-            countRotateOnTheGOal = abs(direct2 - agentDirectionAtGoal) if abs(direct2 - agentDirectionAtGoal) != 3 else 1
+            countRotateOnTheGOal = abs(direct2 - agentDirectionAtGoal) if abs(
+                direct2 - agentDirectionAtGoal) != 3 else 1
             return ManhattanDistance + 1 + countRotateOnTheGOal
 
         # Check if the agent is already in the same row or column as the goal
@@ -120,16 +126,20 @@ class kBestSequencingWithGLKH:
             # Check which direction is left to go
             agentDirectionAtGoal = max(up_or_down, left_or_right)
             # Determine how many turns are needed to face the goal direction
-            countRotateToReachTheGoal = abs(direct1 - agentDirectionAtGoal) if abs(direct1 - agentDirectionAtGoal) != 3 else 1
+            countRotateToReachTheGoal = abs(direct1 - agentDirectionAtGoal) if abs(
+                direct1 - agentDirectionAtGoal) != 3 else 1
             # Calculate the number of turns needed while on the goal to face its required direction
-            countRotateOnTheGOal = abs(direct2 - agentDirectionAtGoal) if abs(direct2 - agentDirectionAtGoal) != 3 else 1
+            countRotateOnTheGOal = abs(direct2 - agentDirectionAtGoal) if abs(
+                direct2 - agentDirectionAtGoal) != 3 else 1
             return ManhattanDistance + countRotateToReachTheGoal + countRotateOnTheGOal
 
         # The agent is not facing the direction of movement and the agent is not already in the same row or column as the goal
         else:
-            finalTargetDirection = left_or_right if (direct1 - 1) % 4 == up_or_down or (direct1 + 1) % 4 == up_or_down else up_or_down
+            finalTargetDirection = left_or_right if (direct1 - 1) % 4 == up_or_down or (
+                    direct1 + 1) % 4 == up_or_down else up_or_down
             # Calculate the number of turns needed while on the target to face its required direction
-            countRotateOnTheGOal = abs(direct2 - finalTargetDirection) if abs(direct2 - finalTargetDirection) != 3 else 1
+            countRotateOnTheGOal = abs(direct2 - finalTargetDirection) if abs(
+                direct2 - finalTargetDirection) != 3 else 1
             return ManhattanDistance + 2 + countRotateOnTheGOal
 
     def solveRtsp(self, includeE, excludeE):
@@ -140,7 +150,7 @@ class kBestSequencingWithGLKH:
         # Generate the MTSP input file
         self.generateMtspFile(costMatrix)
         # Run the LKH solver and return the result
-        return self.invoke_lkh(excludeE)
+        return self.invoke_lkh()
 
     def createCostMatrix(self, includeE, excludeE):
         cmat = np.zeros((len(self.AllPosAndArtGoals), len(self.AllPosAndArtGoals)))
@@ -175,18 +185,18 @@ class kBestSequencingWithGLKH:
                 ftsp.write(nline + "\n")
 
             ftsp.write("GTSP_SET_SECTION\n")
-            for agent in range(1, len(self.Positions)+1):
+            for agent in range(1, len(self.Positions) + 1):
                 ftsp.write(f"{agent} {agent} -1\n")
 
             currSet = len(self.Positions) + 1
             index = len(self.Positions) + 1
             for goal in range(numOfGoals):
-                ftsp.write(f"{currSet} {index} {index+1} {index+2} {index+3} -1\n")
+                ftsp.write(f"{currSet} {index} {index + 1} {index + 2} {index + 3} -1\n")
                 currSet += 1
                 index += 4
             ftsp.close()
 
-    def invoke_lkh(self, excludeE):
+    def invoke_lkh(self):
         cmd = ["/home/yonikid/Desktop/SimulatorAgents/pRobustCbss/GLKH-1.1/GLKH", "files/Mtsp.par"]
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process.wait()
@@ -196,7 +206,7 @@ class kBestSequencingWithGLKH:
         with open("files/Mtsp.tour", mode="r") as fres:
             lines = fres.readlines()
             mtsp_tours["Cost"] = int(lines[1].split("=")[1])
-            ix = 6                                                          # Starting index of the tour in the output file
+            ix = 6  # Starting index of the tour in the output file
             val = int(lines[ix])
             currAgentTour = []
             tour = []
@@ -226,51 +236,122 @@ class kBestSequencingWithGLKH:
             # Add the final agent's tour
             mtsp_tours["Allocations"][agent] = currAgentTour
             # Create tour as pairs of locations
-            mtsp_tours["tour"] = [(tour[i], tour[i+1]) for i in range(len(tour) - 1)]
+            mtsp_tours["tour"] = [(tour[i], tour[i + 1]) for i in range(len(tour) - 1)]
 
             for index, CurrEdge in enumerate(mtsp_tours["tour"]):
                 if CurrEdge in self.included_edges_real_cost:
                     if mtsp_tours["tour"][index + 1][1][0] in self.OnlyLocOfPosition:
-                        mtsp_tours["Cost"] += (self.minDist[(mtsp_tours["tour"][index][0], mtsp_tours["tour"][index][1][0])] + 99999)
+                        mtsp_tours["Cost"] += (self.minDist[(
+                            mtsp_tours["tour"][index][0], mtsp_tours["tour"][index][1][0])] + 99999)
                     else:
                         mtsp_tours["Cost"] += (self.precomputed_distances[CurrEdge] + 99999)
 
         return mtsp_tours
 
     def precompute_all_costs(self):
-        precomputed_distances = {}
+        precomputed_costs = {}
         for i, pos1 in enumerate(self.AllPosAndArtGoals):
             for j, pos2 in enumerate(self.AllPosAndArtGoals):
 
                 if pos1[0] == pos2[0]:
-                    precomputed_distances[(pos1, pos2)] = 0
+                    precomputed_costs[(pos1, pos2)] = 0
 
                 # If it's the next initial position, assign zero cost
                 if i < len(self.Positions) and len(self.Positions) > j == (i + 1) % len(self.Positions):
-                    precomputed_distances[(pos1, pos2)] = 0
+                    precomputed_costs[(pos1, pos2)] = 0
 
                 # If it's not the next initial position, assign a high cost
                 elif i < len(self.Positions) and len(self.Positions) > j != (i + 1) % len(self.Positions):
-                    precomputed_distances[(pos1, pos2)] = 99999
+                    precomputed_costs[(pos1, pos2)] = 99999
 
                 # If the edge goes from a goal to an initial position, assign zero cost
                 elif i >= len(self.Positions) > j:
-                    precomputed_distances[(pos1, pos2)] = 0
+                    precomputed_costs[(pos1, pos2)] = 0
                 else:
-                    precomputed_distances[(pos1, pos2)] = self.calculate_heuristic_value(pos1, pos2)
+                    precomputed_costs[(pos1, pos2)] = self.calculate_the_cost_of_path_between_two_positions(pos1, pos2)
 
-                self.minDist[(pos1, pos2[0])] = min(self.minDist[(pos1, pos2[0])], precomputed_distances[(pos1, pos2)])
+                self.minDist[(pos1, pos2[0])] = min(self.minDist[(pos1, pos2[0])], precomputed_costs[(pos1, pos2)])
 
-        return precomputed_distances
+        return precomputed_costs
 
+    def calculate_the_cost_of_path_between_two_positions(self, pos1, pos2):
+        OpenList = PriorityQueue()
+        ClosedList = set()
 
-p = kBestSequencingWithGLKH([(5, 1), (31, 2), (51, 0)], [29, 53], 12, 12).Solution
+        S = State(pos1)
+        f_val = self.calculate_heuristic_cost_between_positions(pos1, pos2) + S.g
+        OpenList.put((f_val, S))
 
-# p = kBestSequencingWithGLKH([(50,0), (89,3)], [17, 56], 7, 12).Solution
+        while not OpenList.empty():
+            _, S = OpenList.get()
 
-# p = kBestSequencingWithGLKH([(74,0)], [41, 80, 5], 10, 12).Solution
+            ClosedList.add(S.CurPosition)
 
-print(p)
+            if S.CurPosition == pos2:
+                return S.g
 
+            if (S.CurPosition, pos2) in self.dp_cache:
+                return S.g + self.dp_cache[(S.CurPosition, pos2)]
 
+            neighbors = self.GetNeighbors(S)
+
+            for Sl in neighbors:
+                if Sl.CurPosition not in ClosedList:
+                    f_val = self.calculate_heuristic_cost_between_positions(Sl.CurPosition, pos2) + Sl.g
+                    OpenList.put((f_val, Sl))
+
+    def GetNeighbors(self, S):
+        neighbors = set()
+        loc, direct = S.CurPosition
+
+        candidates = [loc + 1, loc + self.MapAndDims["Cols"], loc - 1, loc - self.MapAndDims["Cols"]]
+
+        # Try moving in the current direction
+        loc_after_move = candidates[direct]
+        if self.validateMove(loc_after_move, S) and (loc_after_move, direct):
+            neighbors.add(State((loc_after_move, direct), S.g + 1, S))
+
+        # Try turning left
+        new_direction = (direct - 1) % 4
+        neighbors.add(State((loc, new_direction), S.g + 1, S))
+
+        # Try turning right
+        new_direction = (direct + 1) % 4
+        neighbors.add(State((loc, new_direction), S.g + 1, S))
+
+        return neighbors
+
+    def validateMove(self, loc_after_move, S):
+        # Extract the agent's location and direction before taking the next step
+        loc, _ = S.CurPosition
+
+        # If the agent is at the top or bottom boundary, it cannot move up or down
+        if not (0 <= loc_after_move < self.MapAndDims["Cols"] * self.MapAndDims["Rows"]):
+            return False
+
+        # If the agent is at the right boundary, it cannot move right
+        if loc % self.MapAndDims["Cols"] == self.MapAndDims["Cols"] - 1 and loc_after_move % \
+                self.MapAndDims["Cols"] == 0:
+            return False
+
+        # If the agent is at the left boundary, it cannot move left
+        if loc % self.MapAndDims["Cols"] == 0 and loc_after_move % self.MapAndDims["Cols"] == \
+                self.MapAndDims["Cols"] - 1:
+            return False
+
+        if self.MapAndDims["Map"][loc_after_move] != 0:
+            return False
+
+        return True
+
+#
+# d = {"Rows": 12, "Cols": 12, "Map": [0 for _ in range(12 * 12)]}
+# p = kBestSequencingWithGLKH([(5, 1), (31, 2), (51, 0)], [29, 53], d)
+# p.run(15)
+#
+# p = kBestSequencingWithGLKH([(50,0), (89,3)], [17, 56], d)
+# p.run(12)
+#
+# p = kBestSequencingWithGLKH([(74,0)], [41, 80, 5], d)
+# p.run(12)
 
