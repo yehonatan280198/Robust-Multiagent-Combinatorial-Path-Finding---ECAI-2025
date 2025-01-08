@@ -31,7 +31,7 @@ class pRobustCbss:
     def run(self):
 
         # Calculate the best sequence of task allocations (k=1)
-        self.kOptimalSequences[1] = self.kBestSequencingWithGLKH.run(1)
+        self.kOptimalSequences[1] = self.kBestSequencingWithGLKH.Find_K_Best_Solution(1)
         # Increment root node counter
         self.num_roots_generated += 1
 
@@ -79,7 +79,7 @@ class pRobustCbss:
 
         # Generate a new root with an updated sequence
         self.num_roots_generated += 1
-        self.kOptimalSequences[self.num_roots_generated] = self.kBestSequencingWithGLKH.run(self.num_roots_generated)
+        self.kOptimalSequences[self.num_roots_generated] = self.kBestSequencingWithGLKH.Find_K_Best_Solution(self.num_roots_generated)
 
         if self.kOptimalSequences[self.num_roots_generated]["Cost"] == math.inf:
             return N
