@@ -1,45 +1,64 @@
 import math
 import os
 import subprocess
+from collections import deque, defaultdict
 
 import numpy as np
 from queue import PriorityQueue
+from pRobustCbss.NodeStateConstClasses import State
+
+
+def generateMtspPar():
+    lines = ["PROBLEM_FILE = files/Mtsp.tsp\n", "MOVE_TYPE = 5\n", "PATCHING_C = 3\n",
+             "PATCHING_A = 2\n", "RUNS = 10\n", "OUTPUT_TOUR_FILE = files/Mtsp.tour\n"]
+
+    with open("files/Mtsp.par", mode="w+") as fpar:
+        fpar.writelines(lines)
+
+
+def generateMtspFile(costMatrix):
+    nx, ny = costMatrix.shape
+    with open("files/Mtsp.tsp", mode="w+") as ftsp:
+        ftsp.writelines(["NAME : mtspf\n", "COMMENT : file for mtspf test\n", "TYPE : ATSP\n"])
+        ftsp.write("DIMENSION : " + str(nx) + "\n")
+        ftsp.writelines(
+            ["EDGE_WEIGHT_TYPE : EXPLICIT\n", "EDGE_WEIGHT_FORMAT : FULL_MATRIX\n", "EDGE_WEIGHT_SECTION\n"])
+        for ix in range(nx):
+            nline = ""
+            for iy in range(nx):
+                nline = nline + str(int(costMatrix[(ix, iy)])) + " "
+            ftsp.write(nline + "\n")
+        ftsp.close()
 
 
 class kBestSequencing:
-    def __init__(self, Positions, GoalLocations, k, num_of_cols, rotate):
+    def __init__(self, Positions, GoalLocations, dict_of_map_and_dim):
         self.Positions = Positions
-        self.locations = [loc for loc, direct in Positions]             # Extract only locations, ignoring direction
-        self.GoalLocations = GoalLocations                              # Locations of goals
-        self.k = k                                                      # Number of optimal solutions to find
-        self.num_of_cols = num_of_cols                                  # Number of columns in the grid
+        self.OnlyLocOfPosition = [pos for pos, _ in Positions]  # Extract only locations, ignoring direction
+        self.GoalLocations = GoalLocations  # Locations of goals
+        self.AllLocPosAndGoals = self.OnlyLocOfPosition + self.GoalLocations
 
-        self.OPEN = PriorityQueue()                                     # Priority queue for exploring k-best solutions
-        self.includedEdgesRealCost = {}                                 # Stores real costs for included edges
+        self.MapAndDims = dict_of_map_and_dim
 
-        self.rotate = rotate
+        self.OPEN = PriorityQueue()  # Priority queue for exploring k-best solutions
+        self.included_edges_real_cost = set()  # Stores real costs for included edges
+
+        self.Counter_BFS_For_Test = 0
+        self.Counter_Solver_Tsp_For_Test = 0
 
         # Precompute Manhattan distances between all points
-        self.precomputed_distances = {}
-        currLocsAndGoals = self.locations + self.GoalLocations
-        for i, loc1 in enumerate(currLocsAndGoals):
-            for j, loc2 in enumerate(currLocsAndGoals):
-                if self.rotate:
-                    self.precomputed_distances[(i, j)] = self.calculateManhattanDistance(loc1, loc2)
-                else:
-                    self.precomputed_distances[(i, j)] = self.calculateManhattanDistanceOriginal(loc1, loc2)
+        self.precomputed_cost = defaultdict(int)
 
-        # Run the algorithm
-        self.Solution = self.run()
+        self.Precompute_All_The_Costs()
 
-    def run(self):
+    def run(self, k):
         current_dir = os.getcwd()
         os.chdir('/home/yonikid/Desktop/SimulatorAgents/pRobustCbss')
 
         # Initialize sets for included and excluded edges
         includeE, excludeE = set(), set()
         # Solve the problem for the initial setup
-        optimalSequences = self.solveRtsp(includeE, excludeE)
+        optimalSequences = self.Solve_Tsp_With_Constraints(includeE, excludeE)
         # Add to queue
         self.OPEN.put((optimalSequences["Cost"], (includeE, excludeE, optimalSequences)))
         # List to store k-best solutions
@@ -50,22 +69,24 @@ class kBestSequencing:
             _, (includeE, excludeE, optimalSequences) = self.OPEN.get()
             # Append the optimal sequence to results
             S.append(optimalSequences)
+            print(optimalSequences)
 
             # Stop if k solutions are found
-            if len(S) == self.k:
+            if len(S) == k:
                 os.chdir(current_dir)
-                return S[self.k - 1]
+                return S[k - 1]
 
             # Generate new potential solutions by varying include/exclude sets
-            indexEdges = optimalSequences["tour"]
-            for index, edge in enumerate(indexEdges):
+            for index in range(len(optimalSequences["tour"])):
+                self.included_edges_real_cost = set()
                 # Add edges to include set
-                newIncludeE = includeE | set(indexEdges[:index])
+                newIncludeE = includeE | set(optimalSequences["tour"][:index])
+                for CurrEdge in newIncludeE:
+                    self.included_edges_real_cost.add(CurrEdge)
                 # Add the current edge to exclude set
-                newExcludeE = excludeE | {indexEdges[index]}
-
+                newExcludeE = excludeE | {optimalSequences["tour"][index]}
                 # Solve again
-                PotentialOptimalSequences = self.solveRtsp(newIncludeE, newExcludeE)
+                PotentialOptimalSequences = self.Solve_Tsp_With_Constraints(newIncludeE, newExcludeE)
 
                 # Validate the new solution by ensuring it respects include/exclude constraints
                 if not all(edge in PotentialOptimalSequences["tour"] for edge in newIncludeE):
@@ -76,91 +97,36 @@ class kBestSequencing:
                     continue
 
                 # Add the valid solution to the queue
-                self.OPEN.put((PotentialOptimalSequences["Cost"], (newIncludeE, newExcludeE, PotentialOptimalSequences)))
+                self.OPEN.put(
+                    (PotentialOptimalSequences["Cost"], (newIncludeE, newExcludeE, PotentialOptimalSequences)))
 
         return {"Allocations": {}, "tour": [], "Cost": math.inf}
 
-    def solveRtsp(self, includeE, excludeE):
+    def Solve_Tsp_With_Constraints(self, includeE, excludeE):
         # Create the cost matrix
-        costMatrix = self.createCostMatrix(includeE, excludeE)
+        costMatrix = self.Create_Cost_Matrix(includeE, excludeE)
         # Generate LKH parameter file
-        self.generateMtspPar()
+        generateMtspPar()
         # Generate the MTSP input file
-        self.generateMtspFile(costMatrix)
+        generateMtspFile(costMatrix)
         # Run the LKH solver and return the result
         return self.invoke_lkh()
 
-    def createCostMatrix(self, includeE, excludeE):
-        # Reset real cost dictionary
-        self.includedEdgesRealCost = {}
-        # Combine agent locations and task locations
-        currLocsAndGoals = self.locations + self.GoalLocations
-        # Total number of locations
-        size = len(currLocsAndGoals)
-        # Initialize cost matrix
-        cmat = np.zeros((size, size))
+    def Create_Cost_Matrix(self, includeE, excludeE):
+        cmat = np.zeros((len(self.AllLocPosAndGoals), len(self.AllLocPosAndGoals)))
+        for row, rowLoc in enumerate(self.AllLocPosAndGoals):
+            for col, colLoc in enumerate(self.AllLocPosAndGoals):
 
-        for row in range(size):
-            for col in range(size):
-
-                # self-loops
-                if row == col:
-                    continue
-
-                # If the edge is in the include set, its cost is zero
-                elif (currLocsAndGoals[row], currLocsAndGoals[col]) in includeE:
-                    cmat[row, col] = -99999
-                    # Special case for next initial positions
-                    if row < len(self.locations) and len(self.locations) > col == (row + 1) % len(self.locations) or row >= len(self.locations) > col:
-                        self.includedEdgesRealCost[(currLocsAndGoals[row], currLocsAndGoals[col])] = 0
-                    # Calculate Manhattan distance as the real cost
+                # if not same location
+                if rowLoc != colLoc:
+                    if (rowLoc, colLoc) in includeE:
+                        cmat[row, col] = -99999
+                    elif (rowLoc, colLoc) in excludeE:
+                        cmat[row, col] = 99999
                     else:
-                        self.includedEdgesRealCost[(currLocsAndGoals[row], currLocsAndGoals[col])] = self.precomputed_distances[(row, col)]
+                        cmat[row, col] = self.precomputed_cost[(rowLoc, colLoc)]
 
-                # If the edge is in the exclude set, assign a high cost to prohibit its use
-                elif (currLocsAndGoals[row], currLocsAndGoals[col]) in excludeE:
-                    cmat[row, col] = 99999
-
-                # If it's the next initial position, assign zero cost
-                elif row < len(self.locations) and len(self.locations) > col == (row + 1) % len(self.locations):
-                    cmat[row, col] = 0
-
-                # If it's not the next initial position, assign a high cost
-                elif row < len(self.locations) and len(self.locations) > col != (row + 1) % len(self.locations):
-                    cmat[row, col] = 99999
-
-                # If the edge goes from a goal to an initial position, assign zero cost
-                elif row >= len(self.locations) > col:
-                    cmat[row, col] = 0
-
-                # Default case: calculate Manhattan distance as the cost
-                else:
-                    cmat[row, col] = self.precomputed_distances[(row, col)]
         return cmat
-
-    def generateMtspPar(self):
-        with open("files/Mtsp.par", mode="w+") as fpar:
-            fpar.writelines(["PROBLEM_FILE = files/Mtsp.tsp\n"])
-            fpar.writelines(["MOVE_TYPE = 5\n"])
-            fpar.writelines(["PATCHING_C = 3\n"])
-            fpar.writelines(["PATCHING_A = 2\n"])
-            fpar.writelines(["RUNS = 10\n"])
-            fpar.writelines(["OUTPUT_TOUR_FILE = files/Mtsp.tour\n"])
-            fpar.close()
-
-    def generateMtspFile(self, costMatrix):
-        nx, ny = costMatrix.shape
-        with open("files/Mtsp.tsp", mode="w+") as ftsp:
-            ftsp.writelines(["NAME : mtspf\n", "COMMENT : file for mtspf test\n", "TYPE : ATSP\n"])
-            ftsp.write("DIMENSION : " + str(nx) + "\n")
-            ftsp.writelines(
-                ["EDGE_WEIGHT_TYPE : EXPLICIT\n", "EDGE_WEIGHT_FORMAT : FULL_MATRIX\n", "EDGE_WEIGHT_SECTION\n"])
-            for ix in range(nx):
-                nline = ""
-                for iy in range(nx):
-                    nline = nline + str(int(costMatrix[(ix, iy)])) + " "
-                ftsp.write(nline + "\n")
-            ftsp.close()
 
     def invoke_lkh(self):
         cmd = ["/home/yonikid/Desktop/SimulatorAgents/pRobustCbss/LKH-3.0.11/LKH", "files/Mtsp.par"]
@@ -169,12 +135,11 @@ class kBestSequencing:
 
         # Parse the result
         mtsp_tours = {"Allocations": {}, "tour": []}
-        currLocsAndGoals = self.locations + self.GoalLocations
 
         with open("files/Mtsp.tour", mode="r") as fres:
             lines = fres.readlines()
             mtsp_tours["Cost"] = int(lines[1].split("=")[1])
-            ix = 6                                                          # Starting index of the tour in the output file
+            ix = 6  # Starting index of the tour in the output file
             val = int(lines[ix])
             currAgentTour = []
             tour = []
@@ -183,19 +148,19 @@ class kBestSequencing:
 
             # Read until the end of the tour
             while val != -1:
-                tour.append(currLocsAndGoals[val - 1])
+                tour.append(self.AllLocPosAndGoals[val - 1])
                 if first:
                     agent = val - 1
-                    currAgentTour.append(currLocsAndGoals[val - 1])
+                    currAgentTour.append(self.AllLocPosAndGoals[val - 1])
                     first = False
 
                 # If it's a new agent
-                elif not first and val <= len(self.locations):
+                elif not first and val <= len(self.OnlyLocOfPosition):
                     mtsp_tours["Allocations"][agent] = currAgentTour
-                    currAgentTour = [currLocsAndGoals[val - 1]]
+                    currAgentTour = [self.AllLocPosAndGoals[val - 1]]
                     agent = val - 1
                 else:
-                    currAgentTour.append(currLocsAndGoals[val - 1])
+                    currAgentTour.append(self.AllLocPosAndGoals[val - 1])
 
                 ix = ix + 1
                 val = int(lines[ix])
@@ -206,47 +171,89 @@ class kBestSequencing:
             mtsp_tours["tour"] = [(tour[i], tour[i + 1]) for i in range(len(tour) - 1)]
 
             # Adjust cost for included edges
-            for loc in mtsp_tours["tour"]:
-                if loc in self.includedEdgesRealCost:
-                    mtsp_tours["Cost"] += (self.includedEdgesRealCost[loc] + 99999)
+            for index, CurrEdge in enumerate(mtsp_tours["tour"]):
+                if CurrEdge in self.included_edges_real_cost:
+                    mtsp_tours["Cost"] += (self.precomputed_cost[CurrEdge] + 99999)
 
         return mtsp_tours
 
-    def calculateManhattanDistance(self, loc1, loc2):
-        # loc1 divided by num_of_cols gives row1, remainder gives col1
-        row1, col1 = divmod(loc1, self.num_of_cols)
-        # loc2 divided by num_of_cols gives row2, remainder gives col2
-        row2, col2 = divmod(loc2, self.num_of_cols)
-        # Compute Manhattan distance
-        if not (loc1 in self.locations and loc2 in self.GoalLocations):
-            return abs(row1 - row2) + abs(col1 - col2)
+    def Precompute_All_The_Costs(self):
+        for i, pos1 in enumerate(self.Positions):
+            for j, pos2 in enumerate(self.Positions):
+                if i != j and j != (i + 1) % len(self.Positions):
+                    self.precomputed_cost[(pos1[0], pos2[0])] = 99999
 
-        dist = abs(row1 - row2) + abs(col1 - col2)
+        for index, pos in enumerate(self.AllLocPosAndGoals):
+            self.BFS(pos)
 
-        up_or_down = 3 if row1 > row2 else (1 if row1 < row2 else -1)
-        left_or_right = 2 if col1 > col2 else (0 if col1 < col2 else -1)
+    def BFS(self, pos):
+        counter_of_reach_goals = 0
+        self.Counter_BFS_For_Test += 1
+        visited = set()
+        S = State((pos, 0))
+        queue = deque([S])
 
-        CurPosition = next((tup for tup in self.Positions if tup[0] == loc1), None)
+        while queue:
+            current_state = queue.popleft()
 
-        if (CurPosition[1] == up_or_down or CurPosition[1] == left_or_right) and up_or_down != -1 and left_or_right != -1:
-            return dist + 1
+            if current_state.CurPosition in visited:
+                continue
 
-        elif up_or_down == -1 or left_or_right == -1:
-            goalDirect = max(up_or_down, left_or_right)
-            countRotate = abs(goalDirect - CurPosition[1]) if abs(goalDirect - CurPosition[1]) != 3 else 1
-            return dist + countRotate
+            visited.add(current_state.CurPosition)
 
-        return dist + 2
+            if current_state.CurPosition[0] in self.GoalLocations and current_state.CurPosition[0] != pos:
+                self.precomputed_cost[(pos, current_state.CurPosition[0])] = current_state.g
+                counter_of_reach_goals += 1
+                if counter_of_reach_goals == len(self.GoalLocations):
+                    return
 
-    def calculateManhattanDistanceOriginal(self, loc1, loc2):
-        # loc1 divided by num_of_cols gives row1, remainder gives col1
-        row1, col1 = divmod(loc1, self.num_of_cols)
-        # loc2 divided by num_of_cols gives row2, remainder gives col2
-        row2, col2 = divmod(loc2, self.num_of_cols)
-        # Compute Manhattan distance
-        return abs(row1 - row2) + abs(col1 - col2)
+            neighbors = self.GetNeighbors(current_state)
+            for Sl in neighbors:
+                if Sl.CurPosition not in visited:
+                    queue.append(Sl)
+
+    def GetNeighbors(self, S):
+        neighbors = set()
+        loc, _ = S.CurPosition
+
+        candidates = [loc + 1, loc + self.MapAndDims["Cols"], loc - 1, loc - self.MapAndDims["Cols"]]
+
+        for loc_after_move in candidates:
+            if self.validateMove(loc_after_move, S):
+                neighbors.add(State((loc_after_move, 0), S.g + 1, S))
+
+        return neighbors
+
+    def validateMove(self, loc_after_move, S):
+        # Extract the agent's location and direction before taking the next step
+        loc, _ = S.CurPosition
+
+        # If the agent is at the top or bottom boundary, it cannot move up or down
+        if not (0 <= loc_after_move < self.MapAndDims["Cols"] * self.MapAndDims["Rows"]):
+            return False
+
+        # If the agent is at the right boundary, it cannot move right
+        if loc % self.MapAndDims["Cols"] == self.MapAndDims["Cols"] - 1 and loc_after_move % \
+                self.MapAndDims["Cols"] == 0:
+            return False
+
+        # If the agent is at the left boundary, it cannot move left
+        if loc % self.MapAndDims["Cols"] == 0 and loc_after_move % self.MapAndDims["Cols"] == \
+                self.MapAndDims["Cols"] - 1:
+            return False
+
+        if self.MapAndDims["Map"][loc_after_move] != 0:
+            return False
+
+        return True
 
 
-# p = kBestSequencing([(5, 1), (31, 2), (51, 0)], [29, 53], 12, 12, False).Solution
+# d = {"Rows": 12, "Cols": 12, "Map": [0 for _ in range(12 * 12)]}
+# p = kBestSequencing([(5, 1), (31, 2), (51, 0)], [29, 53], d)
+# p.run(15)
 #
-# print(p)
+# p = kBestSequencing([(50,0), (89,3)], [17, 56], d)
+# p.run(12)
+#
+# p = kBestSequencing([(74,0)], [41, 80, 5], d)
+# p.run(12)

@@ -16,29 +16,31 @@ class pRobustCbss:
     def __init__(self, Positions, GoalLocations, no_collision_prob, delaysProb, dict_of_map_and_dim, verifyAlpha):
         self.Positions = Positions  # Initial positions of agents
         self.GoalLocations = GoalLocations  # Locations of goals
-        self.no_collision_prob = no_collision_prob  # The Probability of no collision
-        self.delaysProb = delaysProb  # Delay probabilities for each agent
+        self.No_collision_prob = no_collision_prob  # The Probability of no collision
+        self.DelaysProb = delaysProb  # Delay probabilities for each agent
         self.MapAndDims = dict_of_map_and_dim
-        self.verifyAlpha = verifyAlpha
+        self.VerifyAlpha = verifyAlpha
 
         self.OPEN = PriorityQueue()  # Open list for CBS nodes, prioritized by cost
-        self.num_roots_generated = 0  # Counter for the number of root nodes generated
-        self.kOptimalSequences = {}  # Dictionary to store k-optimal sequences of allocations
-        self.kBestSequencingWithGLKH = kBestSequencingWithGLKH(self.Positions, self.GoalLocations, self.MapAndDims)
+        self.Num_roots_generated = 0  # Counter for the number of root nodes generated
+        self.K_optimal_sequences = {}  # Dictionary to store k-optimal sequences of allocations
+        self.K_best_sequencing_with_GLKH = kBestSequencingWithGLKH(self.Positions, self.GoalLocations, self.MapAndDims)
 
         self.Solution = self.run()
+
+    ####################################################### run ############################################################
 
     def run(self):
 
         # Calculate the best sequence of task allocations (k=1)
-        self.kOptimalSequences[1] = self.kBestSequencingWithGLKH.Find_K_Best_Solution(1)
+        self.K_optimal_sequences[1] = self.K_best_sequencing_with_GLKH.Find_K_Best_Solution(k=1)
         # Increment root node counter
-        self.num_roots_generated += 1
+        self.Num_roots_generated += 1
 
         # Create the root node
         Root = Node()
         # Assign the best sequence of task allocations for all agents to the root node
-        Root.sequence = self.kOptimalSequences[1]
+        Root.sequence = self.K_optimal_sequences[1]
         # Generate paths and calculate the cost for the root node
         LowLevelPlan(Root, self.MapAndDims, self.Positions, list(range(len(self.Positions))))
         # Add the root node to the open list
@@ -56,11 +58,11 @@ class pRobustCbss:
                 continue
 
             # If the paths in the current node are verified as valid, avoiding collisions with probability P, return them as the solution
-            if verify(N.paths, self.delaysProb, self.no_collision_prob, self.verifyAlpha):
-                return N.paths
+            if verify(N.paths, self.DelaysProb, self.No_collision_prob, self.VerifyAlpha):
+                return [N.paths, self.K_best_sequencing_with_GLKH.Counter_Solver_Tsp_For_Test, self.K_best_sequencing_with_GLKH.Counter_BFS_For_Test]
 
             # Identify the first conflict in the paths
-            _, _, x, agent1AndTime, agent2AndTime = self.getlConflict(N)
+            _, _, x, agent1AndTime, agent2AndTime = self.getConflict(N)
 
             # Generate child nodes with constraints to resolve the conflict
             A1 = self.GenChild(N, negConst(agent1AndTime[0], x, agent1AndTime[1]))
@@ -72,21 +74,23 @@ class pRobustCbss:
             self.OPEN.put((A2.g, A2))
             self.OPEN.put((A3.g, A3))
 
+    ####################################################### Check new root ############################################################
+
     def CheckNewRoot(self, N):
         # If the current node cost is within the threshold of the current optimal sequence
-        if N.g <= self.kOptimalSequences[self.num_roots_generated]["Cost"]:
+        if N.g <= self.K_optimal_sequences[self.Num_roots_generated]["Cost"]:
             return N
 
         # Generate a new root with an updated sequence
-        self.num_roots_generated += 1
-        self.kOptimalSequences[self.num_roots_generated] = self.kBestSequencingWithGLKH.Find_K_Best_Solution(self.num_roots_generated)
+        self.Num_roots_generated += 1
+        self.K_optimal_sequences[self.Num_roots_generated] = self.K_best_sequencing_with_GLKH.Find_K_Best_Solution(k=self.Num_roots_generated)
 
-        if self.kOptimalSequences[self.num_roots_generated]["Cost"] == math.inf:
+        if self.K_optimal_sequences[self.Num_roots_generated]["Cost"] == math.inf:
             return N
 
         # Create a new root node
         newRoot = Node()
-        newRoot.sequence = self.kOptimalSequences[self.num_roots_generated]
+        newRoot.sequence = self.K_optimal_sequences[self.Num_roots_generated]
         # Calculate paths and cost for the new root
         LowLevelPlan(newRoot, self.MapAndDims, self.Positions, list(range(len(self.Positions))))
 
@@ -94,33 +98,8 @@ class pRobustCbss:
         self.OPEN.put((N.g, N))
         return None
 
-    # def CheckNewRootOriginal(self, N):
-    #     # If the current node cost is within the threshold of the current optimal sequence
-    #     if N.g <= self.kOptimalSequences[self.num_roots_generated]["Cost"]:
-    #         return N
-    #
-    #     # Generate a new root with an updated sequence
-    #     self.num_roots_generated += 1
-    #     # self.kOptimalSequences[self.num_roots_generated] = kBestSequencing(self.Positions, self.GoalLocations,
-    #     #                                                                    self.num_roots_generated,
-    #     #                                                                    self.num_of_cols, self.rotate).Solution
-    #
-    #     self.kOptimalSequences[self.num_roots_generated] = kBestSequencingWithGLKH(self.Positions, self.GoalLocations, self.num_roots_generated, self.num_of_cols).Solution
-    #
-    #     # Create a new root node
-    #     newRoot = Node()
-    #     newRoot.sequence = self.kOptimalSequences[self.num_roots_generated]
-    #     # Calculate paths and cost for the new root
-    #     LowLevelPlan(newRoot, self.num_of_cols, self.num_of_rows, self.Positions, list(range(len(self.Positions))))
-    #
-    #     if N.g <= newRoot.g:
-    #         self.OPEN.put((newRoot.g, newRoot))
-    #         return N
-    #
-    #     self.OPEN.put((N.g, N))
-    #     return newRoot
-
-    def getlConflict(self, N):
+    ####################################################### Get conflict ############################################################
+    def getConflict(self, N):
         heap = []
         # Iterate over unique pairs of agents
         for agent1, agent2 in combinations(N.paths.keys(), 2):

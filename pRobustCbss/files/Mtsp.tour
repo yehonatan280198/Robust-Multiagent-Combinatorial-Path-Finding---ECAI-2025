@@ -1,43 +1,12 @@
-NAME : mtspf.44.tour
-COMMENT : Length = 44
-COMMENT : Found by GLKH [Keld Helsgaun] Sun Jan  5 08:30:55 2025
+NAME : mtspf.-99999.tour
+COMMENT : Length = -99999
+COMMENT : Found by LKH-3 [Keld Helsgaun] Sat Jan 11 01:38:05 2025
 TYPE : TOUR
-DIMENSION : 35
+DIMENSION : 4
 TOUR_SECTION
 1
-26
-8
-60
-48
-52
-13
-14
-15
-16
-17
-18
-19
-20
-21
-64
-2
-3
-38
-11
-12
-55
 4
-5
-6
-7
-33
-22
-23
-24
-37
-9
-10
-45
-25
+3
+2
 -1
 EOF

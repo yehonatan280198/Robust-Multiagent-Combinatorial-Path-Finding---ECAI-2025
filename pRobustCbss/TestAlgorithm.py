@@ -1,13 +1,19 @@
 import random
 import time
+import csv
 
 from collections import defaultdict
 from multiprocessing import Process, Queue
 from pRobustCbss.Run_pRobustCbss import pRobustCbss
 
+columns = ["Map", "No collision prob", "Delay prob", "Number of agent", "Number of goals", "Number of successes", "Avg time", "Avg calls to TSP", "Avg calls to BFS"]
+with open("output.csv", mode="w", newline="", encoding="utf-8") as file:
+    writer = csv.DictWriter(file, fieldnames=columns)
+    writer.writeheader()
 
-def create_map():
-    file_path = "/home/yonikid/Desktop/SimulatorAgents/Start-Kit-main/example_problems/OurResearch.domain/empty-32-32.map"
+
+def create_map(name):
+    file_path = f"/home/yonikid/Desktop/SimulatorAgents/Start-Kit-main/example_problems/OurResearch.domain/{name}"
     with open(file_path, "r") as file:
         lines = file.readlines()
     map_start_index = lines.index("map\n") + 1
@@ -28,62 +34,82 @@ def create_positions_for_agents_And_Locs_For_Goals(NumAgents, NumGoals, MapAndDi
     return position_for_agents, location_for_agents
 
 
-def run_pRobustCbss(queue, Positions, GoalLocations, No_collision_prob, DelaysProb, dict_of_map_and_dim, VerifyAlpha):
+def run_pRobustCbss(queue, Positions, GoalLocations, No_collision_prob, DelaysProbDict, dict_of_map_and_dim, VerifyAlpha):
 
-    p = pRobustCbss(Positions, GoalLocations, No_collision_prob, DelaysProb, dict_of_map_and_dim, VerifyAlpha)
-    queue.put(dict(p.Solution))
+    p = pRobustCbss(Positions, GoalLocations, No_collision_prob, DelaysProbDict, dict_of_map_and_dim, VerifyAlpha)
+    queue.put(p.Solution)
 
 
-mapAndDim = create_map()
-num_of_agentsList = [3, 5, 10, 15, 20, 25]
-num_of_goalsList = [6, 10, 20, 30, 40, 50]
-no_collision_probList = [0.6, 0.7, 0.8]
+# mapAndDim = create_map()
+mapsList = ["empty-32-32.map", "random-32-32-20.map", "maze-32-32-2.map", "room-32-32-4.map"]       # 4
+num_of_agentsList = [3, 5, 10, 15, 20, 25]                                                          # 6
+num_of_goalsList = [6, 10, 20, 30, 40, 50]                                                          # 6
+no_collision_probList = [0.6, 0.7, 0.8]                                                             # 3
+delays_probList = [0.05, 0.3]                                                                       # 2
+iterations = 10                                                                                     # 10
 verifyAlpha = 0.05
-samples = 10
 max_time = 60
 
-dict_of_successes = defaultdict(lambda: [0, 0])
+dict_of_successes = defaultdict(lambda: [0, 0, 0, 0])
 
-for no_collision_prob in no_collision_probList:
-    for numAgents in num_of_agentsList:
-        for numGoals in num_of_goalsList:
-            delaysProb = {i: 0.1 for i in range(numAgents)}
+for map_name in mapsList:
+    mapAndDim = create_map(map_name)
+    for no_collision_prob in no_collision_probList:
+        for delaysProb in delays_probList:
+            for numAgents in num_of_agentsList:
+                delaysProbDict = {i: delaysProb for i in range(numAgents)}
+                for numGoals in num_of_goalsList:
 
-            for sample in range(samples):
-                AgentsPositions, GoalsLocations = create_positions_for_agents_And_Locs_For_Goals(numAgents, numGoals, mapAndDim)
-                print("AgentsPositions:", AgentsPositions)
-                print("GoalsLocations:", GoalsLocations)
+                    for _ in range(iterations):
+                        AgentsPositions, GoalsLocations = create_positions_for_agents_And_Locs_For_Goals(numAgents, numGoals, mapAndDim)
+                        print("AgentsPositions:", AgentsPositions)
+                        print("GoalsLocations:", GoalsLocations)
+                        successful_runs = True
 
-                successful_runs = True
+                        queue = Queue()
+                        start_time = time.time()
+                        process = Process(target=run_pRobustCbss, args=(queue, AgentsPositions, GoalsLocations, no_collision_prob, delaysProbDict, mapAndDim, verifyAlpha))
+                        process.start()
+                        process.join(timeout=max_time)
 
-                queue = Queue()
-                start_time = time.time()
-                process = Process(target=run_pRobustCbss, args=(queue, AgentsPositions, GoalsLocations, no_collision_prob, delaysProb, mapAndDim, verifyAlpha))
-                process.start()
-                process.join(timeout=max_time)
+                        if process.is_alive():
+                            process.terminate()
+                            process.join()
+                            print(f"Skipped due to timeout after {max_time} seconds.")
+                            print("--------------------------------------------------------------------------")
+                            successful_runs = False
+                            continue
 
-                if process.is_alive():
-                    process.terminate()
-                    process.join()
-                    print(f"Skipped due to timeout after {max_time} seconds.")
-                    print("--------------------------------------------------------------------------")
-                    successful_runs = False
-                    continue
+                        end_time = time.time()
+                        elapsed_time = round(end_time - start_time, 2)
 
-                end_time = time.time()
-                elapsed_time = round(end_time - start_time, 2)
+                        # If the process completed in time, retrieve the solution
+                        solution = queue.get()
+                        print("Solution:", solution)
+                        print("--------------------------------------------------------------------------")
 
+                        if successful_runs:
+                            dict_of_successes[(map_name, no_collision_prob, delaysProb, numAgents, numGoals)][0] += 1
+                            dict_of_successes[(map_name, no_collision_prob, delaysProb, numAgents, numGoals)][1] += elapsed_time
+                            dict_of_successes[(map_name, no_collision_prob, delaysProb, numAgents, numGoals)][2] += solution[1]           # TSP
+                            dict_of_successes[(map_name, no_collision_prob, delaysProb, numAgents, numGoals)][3] += solution[2]           # BFS
 
-                # If the process completed in time, retrieve the solution
-                solution = queue.get()
-                print("Solution:", solution)
-                print("--------------------------------------------------------------------------")
+                    count_success = dict_of_successes[(map_name, no_collision_prob, delaysProb, numAgents, numGoals)][0]
+                    if count_success > 0:
+                        record = [
+                            map_name,
+                            no_collision_prob,
+                            delaysProb,
+                            numAgents,
+                            numGoals,
+                            count_success,
+                            round(dict_of_successes[(map_name, no_collision_prob, delaysProb, numAgents, numGoals)][1] / count_success, 3),
+                            round(dict_of_successes[(map_name, no_collision_prob, delaysProb, numAgents, numGoals)][2] / count_success, 3),
+                            round(dict_of_successes[(map_name, no_collision_prob, delaysProb, numAgents, numGoals)][3] / count_success, 3),
+                        ]
+                        with open("output.csv", mode="a", newline="", encoding="utf-8") as file:
+                            writer = csv.writer(file)
+                            writer.writerow(record)
 
-                if successful_runs:
-                    dict_of_successes[(no_collision_prob, numAgents, numGoals)][0] += 1
-                    dict_of_successes[(no_collision_prob, numAgents, numGoals)][1] += elapsed_time
-
-            if dict_of_successes[(no_collision_prob, numAgents, numGoals)][0] > 0:
-                dict_of_successes[(no_collision_prob, numAgents, numGoals)][1] = dict_of_successes[(no_collision_prob,numAgents, numGoals)][1] / dict_of_successes[(no_collision_prob, numAgents, numGoals)][0]
-
-            print(dict_of_successes)
+                    else:
+                        break
