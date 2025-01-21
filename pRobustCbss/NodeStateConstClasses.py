@@ -5,7 +5,8 @@ from functools import total_ordering
 class Node:
     def __init__(self):
         self.paths = defaultdict(list)
-        self.constraint = defaultdict(set)
+        self.negConstraints = defaultdict(set)
+        self.posConstraints = defaultdict(set)
         self.g = 0
         self.sequence = {}
 
@@ -29,21 +30,21 @@ class negConst:
 
 
 class posConst:
-    def __init__(self, agent1, agent2, x, t, SumTimeAndDelta):
+    def __init__(self, agent1, agent2, x, agent1_time, agent2_time):
         self.agent1 = agent1
         self.agent2 = agent2
         self.x = x
-        self.t = t
-        self.SumTimeAndDelta = SumTimeAndDelta
+        self.agent1_time = agent1_time
+        self.agent2_time = agent2_time
 
     def __eq__(self, other):
         if not isinstance(other, posConst):
             return False
-        return (self.agent1, self.agent2, self.x, self.t, self.SumTimeAndDelta) == (
-            other.agent1, other.agent2, other.x, other.t, other.SumTimeAndDelta)
+        return (self.agent1, self.agent2, self.x, self.agent1_time, self.agent2_time) == (
+            other.agent1, other.agent2, other.x, other.agent1_time, other.agent2_time)
 
     def __hash__(self):
-        return hash((self.agent1, self.agent2, self.x, self.t, self.SumTimeAndDelta))
+        return hash((self.agent1, self.agent2, self.x, self.agent1_time, self.agent2_time))
 
 
 @total_ordering

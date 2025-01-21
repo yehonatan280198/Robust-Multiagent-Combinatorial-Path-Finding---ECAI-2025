@@ -148,17 +148,16 @@ class LowLevelPlan:
             return False
 
         # Check if the move violates any negative constraints
-        for const in self.Node.constraint[agent]:
-            if isinstance(const, negConst):
-                if const.t == state.g + 1 and (const.x == loc_after_move or const.x == (loc, loc_after_move) or const.x == (loc_after_move, loc)):
-                    return False
+        for neg_const in self.Node.negConstraints[agent]:
+            if neg_const.t == state.g + 1 and (neg_const.x == loc_after_move or neg_const.x == frozenset((loc, loc_after_move))):
+                return False
 
-            elif isinstance(const, posConst):
-                if const.agent1 == agent and const.t == state.g + 1 and (const.x != loc_after_move and const.x != (loc, loc_after_move) and const.x != (loc_after_move, loc)):
-                    return False
+        for pos_const in self.Node.posConstraints[agent]:
+            if pos_const.agent1 == agent and pos_const.agent1_time == state.g + 1 and (pos_const.x != loc_after_move and pos_const.x != frozenset((loc, loc_after_move))):
+                return False
 
-                if const.agent2 == agent and const.SumTimeAndDelta == state.g + 1 and (const.x != loc_after_move and const.x != (loc, loc_after_move) and const.x != (loc_after_move, loc)):
-                    return False
+            if pos_const.agent2 == agent and pos_const.agent2_time == state.g + 1 and (pos_const.x != loc_after_move and pos_const.x != frozenset((loc, loc_after_move))):
+                return False
 
         return True
 

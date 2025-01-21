@@ -1,0 +1,75 @@
+Configuration Log
+==================================================
+
+Iteration: 0
+Map: empty-32-32.map
+No Collision Probability: 0.6
+Delays Probability: 0.05
+Number of Agents: 3
+Number of Goals: 6
+Agents Positions: [(842, 1), (16, 2), (822, 2)]
+Goals Locations: [445, 712, 305, 21, 680, 728]
+--------------------------------------------------
+Iteration: 1
+Map: empty-32-32.map
+No Collision Probability: 0.6
+Delays Probability: 0.05
+Number of Agents: 3
+Number of Goals: 6
+Agents Positions: [(854, 1), (578, 3), (728, 3)]
+Goals Locations: [445, 942, 36, 1005, 610, 945]
+--------------------------------------------------
+Iteration: 2
+Map: empty-32-32.map
+No Collision Probability: 0.6
+Delays Probability: 0.05
+Number of Agents: 3
+Number of Goals: 6
+Agents Positions: [(145, 2), (205, 3), (978, 1)]
+Goals Locations: [974, 694, 602, 344, 794, 348]
+--------------------------------------------------
+Iteration: 3
+Map: empty-32-32.map
+No Collision Probability: 0.6
+Delays Probability: 0.05
+Number of Agents: 3
+Number of Goals: 6
+Agents Positions: [(974, 0), (909, 1), (725, 0)]
+Goals Locations: [232, 168, 38, 813, 172, 484]
+--------------------------------------------------
+Iteration: 4
+Map: empty-32-32.map
+No Collision Probability: 0.6
+Delays Probability: 0.05
+Number of Agents: 3
+Number of Goals: 6
+Agents Positions: [(663, 3), (610, 3), (578, 1)]
+Goals Locations: [795, 453, 960, 101, 965, 743]
+--------------------------------------------------
+Iteration: 5
+Map: empty-32-32.map
+No Collision Probability: 0.6
+Delays Probability: 0.05
+Number of Agents: 3
+Number of Goals: 6
+Agents Positions: [(56, 0), (192, 2), (149, 1)]
+Goals Locations: [248, 745, 719, 553, 835, 813]
+--------------------------------------------------
+Iteration: 6
+Map: empty-32-32.map
+No Collision Probability: 0.6
+Delays Probability: 0.05
+Number of Agents: 3
+Number of Goals: 6
+Agents Positions: [(301, 2), (677, 3), (100, 3)]
+Goals Locations: [150, 308, 743, 913, 113, 485]
+--------------------------------------------------
+Iteration: 7
+Map: empty-32-32.map
+No Collision Probability: 0.6
+Delays Probability: 0.05
+Number of Agents: 3
+Number of Goals: 6
+Agents Positions: [(515, 1), (531, 0), (369, 1)]
+Goals Locations: [331, 804, 996, 601, 474, 753]
+--------------------------------------------------

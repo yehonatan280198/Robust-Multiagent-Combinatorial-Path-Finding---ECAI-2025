@@ -66,6 +66,7 @@ def verify(paths, delaysProb, no_collision_prob, verifyAlpha):
     # Calculate initial simulations size (s0) based on the desired confidence level
     z1SubAlphaSquare = (norm.ppf(1 - verifyAlpha)) ** 2
     s0 = max(30, math.ceil(z1SubAlphaSquare * (no_collision_prob / (1 - no_collision_prob))))
+
     # Initial simulation run
     count_success = run_s_simulations(s0, paths, delaysProb)
     # Additional simulations performed iteratively

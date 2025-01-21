@@ -1,6 +1,6 @@
-PROBLEM_FILE = files/Mtsp.tsp
+PROBLEM_FILE = /home/yonikid/Desktop/SimulatorAgents/pRobustCbss/files/Mtsp.gtsp
 MOVE_TYPE = 5
 PATCHING_C = 3
 PATCHING_A = 2
 RUNS = 10
-OUTPUT_TOUR_FILE = files/Mtsp.tour
+OUTPUT_TOUR_FILE = /home/yonikid/Desktop/SimulatorAgents/pRobustCbss/files/Mtsp.tour

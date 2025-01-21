@@ -11,6 +11,69 @@ from pRobustCbss.kBestSequencing import kBestSequencing
 from pRobustCbss.kBestSequencingWithGLKH import kBestSequencingWithGLKH
 
 
+def create_loc_times(path):
+    locTimes = {}
+    for i, (loc, _) in enumerate(path):
+        locTimes.setdefault(loc, i)
+    return locTimes
+
+
+def create_edge_times(path):
+    edgeTimes = {}
+    for i in range(len(path) - 1):
+        edge = (path[i][0], path[i + 1][0])
+        edgeTimes.setdefault(edge, i + 1)
+    return edgeTimes
+
+
+def getConflict(N):
+    heap = []
+    # Iterate over unique pairs of agents
+    for agent1, agent2 in combinations(N.paths.keys(), 2):
+        allPosConstDict = {
+            (pos_const.x, (pos_const.agent1, pos_const.agent1_time), (pos_const.agent2, pos_const.agent2_time)): True
+            for pos_const in N.posConstraints[agent1] | N.posConstraints[agent2]}
+        path1, path2 = N.paths[agent1], N.paths[agent2]
+
+        # Create loc-time dictionaries
+        locTimes1 = create_loc_times(path1)
+        locTimes2 = create_loc_times(path2)
+
+        # Detect location conflicts
+        for loc in locTimes1.keys() & locTimes2.keys():
+            time1, time2 = locTimes1[loc], locTimes2[loc]
+            delta = abs(time1 - time2)
+            Time = min(time1, time2)
+
+            agent1_time, agent2_time = (Time, Time + delta) if time1 <= time2 else (Time + delta, Time)
+
+            if (loc, (agent1, agent1_time), (agent2, agent2_time)) not in allPosConstDict:
+                heapq.heappush(heap, (delta, Time, loc, (agent1, agent1_time), (agent2, agent2_time)))
+
+        # Create edge-time dictionaries
+        edgeTimes1 = create_edge_times(path1)
+        edgeTimes2 = create_edge_times(path2)
+
+        # Detect edge conflicts, including reversed edges
+        for edge1, time1 in edgeTimes1.items():
+            reversed_edge1 = (edge1[1], edge1[0])
+            if reversed_edge1 in edgeTimes2:
+                time2 = edgeTimes2[reversed_edge1]
+                delta = abs(time1 - time2)
+                Time = min(time1, time2)
+
+                agent1_time, agent2_time = (Time, Time + delta) if time1 <= time2 else (Time + delta, Time)
+
+                if (frozenset(edge1), (agent1, agent1_time), (agent2, agent2_time)) not in allPosConstDict:
+                    heapq.heappush(heap, (delta, Time, frozenset(edge1), (agent1, agent1_time), (agent2, agent2_time)))
+
+    # Return the first conflict in the heap
+    if heap:
+        return heapq.heappop(heap)
+    else:
+        return None
+
+
 class pRobustCbss:
 
     def __init__(self, Positions, GoalLocations, no_collision_prob, delaysProb, dict_of_map_and_dim, verifyAlpha):
@@ -59,19 +122,26 @@ class pRobustCbss:
 
             # If the paths in the current node are verified as valid, avoiding collisions with probability P, return them as the solution
             if verify(N.paths, self.DelaysProb, self.No_collision_prob, self.VerifyAlpha):
-                return [N.paths, self.K_best_sequencing_with_GLKH.Counter_Solver_Tsp_For_Test, self.K_best_sequencing_with_GLKH.Counter_BFS_For_Test]
+                return [N.paths, self.K_best_sequencing_with_GLKH.Counter_Solver_Tsp_For_Test,
+                        self.K_best_sequencing_with_GLKH.Counter_BFS_For_Test]
 
             # Identify the first conflict in the paths
-            _, _, x, agent1AndTime, agent2AndTime = self.getConflict(N)
+            const = getConflict(N)
+            if const is None:
+                continue
+            else:
+                _, _, x, agent1AndTime, agent2AndTime = const
 
-            # Generate child nodes with constraints to resolve the conflict
-            A1 = self.GenChild(N, negConst(agent1AndTime[0], x, agent1AndTime[1]))
-            A2 = self.GenChild(N, negConst(agent2AndTime[0], x, agent2AndTime[1]))
+            # Generate child nodes with constraints to resolve the conflict and add child nodes to the open list
+            if agent1AndTime[1] != 0:
+                A1 = self.GenChild(N, negConst(agent1AndTime[0], x, agent1AndTime[1]))
+                self.OPEN.put((A1.g, A1))
+
+            if agent2AndTime[1] != 0:
+                A2 = self.GenChild(N, negConst(agent2AndTime[0], x, agent2AndTime[1]))
+                self.OPEN.put((A2.g, A2))
+
             A3 = self.GenChild(N, posConst(agent1AndTime[0], agent2AndTime[0], x, agent1AndTime[1], agent2AndTime[1]))
-
-            # Add child nodes to the open list
-            self.OPEN.put((A1.g, A1))
-            self.OPEN.put((A2.g, A2))
             self.OPEN.put((A3.g, A3))
 
     ####################################################### Check new root ############################################################
@@ -83,7 +153,8 @@ class pRobustCbss:
 
         # Generate a new root with an updated sequence
         self.Num_roots_generated += 1
-        self.K_optimal_sequences[self.Num_roots_generated] = self.K_best_sequencing_with_GLKH.Find_K_Best_Solution(k=self.Num_roots_generated)
+        self.K_optimal_sequences[self.Num_roots_generated] = self.K_best_sequencing_with_GLKH.Find_K_Best_Solution(
+            k=self.Num_roots_generated)
 
         if self.K_optimal_sequences[self.Num_roots_generated]["Cost"] == math.inf:
             return N
@@ -99,80 +170,22 @@ class pRobustCbss:
         return None
 
     ####################################################### Get conflict ############################################################
-    def getConflict(self, N):
-        heap = []
-        # Iterate over unique pairs of agents
-        for agent1, agent2 in combinations(N.paths.keys(), 2):
-            path1 = N.paths[agent1]
-            path2 = N.paths[agent2]
-
-            # Create loc-time dictionaries
-            locTimes1 = {}
-            for i, (loc, _) in enumerate(path1):
-                if loc not in locTimes1:
-                    locTimes1[loc] = i
-
-            locTimes2 = {}
-            for i, (loc, _) in enumerate(path2):
-                if loc not in locTimes2:
-                    locTimes2[loc] = i
-
-            # Detect location conflicts
-            common_locs = locTimes1.keys() & locTimes2.keys()
-            for loc in common_locs:
-                time1 = locTimes1[loc]
-                time2 = locTimes2[loc]
-                delta = abs(time1 - time2)
-                Time = min(time1, time2)
-
-                if time1 <= time2:
-                    heapq.heappush(heap, (delta, Time, loc, (agent1, Time), (agent2, Time + delta)))
-                else:
-                    heapq.heappush(heap, (delta, Time, loc, (agent1, Time + delta), (agent2, Time)))
-
-            # Create edge-time dictionaries
-            edgeTimes1 = {}
-            for i in range(len(path1) - 1):
-                edge = (path1[i][0], path1[i + 1][0])
-                if edge not in edgeTimes1:
-                    edgeTimes1[edge] = i + 1
-
-            edgeTimes2 = {}
-            for i in range(len(path2) - 1):
-                edge = (path2[i][0], path2[i + 1][0])
-                if edge not in edgeTimes2:
-                    edgeTimes2[edge] = i + 1
-
-            # Detect edge conflicts, including reversed edges
-            for edge1, time1 in edgeTimes1.items():
-                reversed_edge1 = (edge1[1], edge1[0])
-                if reversed_edge1 in edgeTimes2:
-                    time2 = edgeTimes2.get(reversed_edge1)
-                    delta = abs(time1 - time2)
-                    Time = min(time1, time2)
-
-                    if time1 <= time2:
-                        heapq.heappush(heap, (delta, Time, edge1, (agent1, Time), (agent2, Time + delta)))
-                    else:
-                        heapq.heappush(heap, (delta, Time, edge1, (agent1, Time + delta), (agent2, Time)))
-
-        # Return the first conflict in the heap
-        return heapq.heappop(heap)
 
     def GenChild(self, N, NewCons):
         A = Node()
-        A.constraint = copy.deepcopy(N.constraint)
+        A.negConstraints = copy.deepcopy(N.negConstraints)
+        A.posConstraints = copy.deepcopy(N.posConstraints)
         A.paths = {agent: path[:] for agent, path in N.paths.items()}
         A.sequence = N.sequence
         A.g = N.g
 
         if isinstance(NewCons, negConst):
-            A.constraint[NewCons.agent] = A.constraint[NewCons.agent] | {NewCons}
+            A.negConstraints[NewCons.agent] = A.negConstraints[NewCons.agent] | {NewCons}
             LowLevelPlan(A, self.MapAndDims, self.Positions, [NewCons.agent])
 
         elif isinstance(NewCons, posConst):
-            A.constraint[NewCons.agent1] = A.constraint[NewCons.agent1] | {NewCons}
-            A.constraint[NewCons.agent2] = A.constraint[NewCons.agent2] | {NewCons}
+            A.posConstraints[NewCons.agent1] = A.posConstraints[NewCons.agent1] | {NewCons}
+            A.posConstraints[NewCons.agent2] = A.posConstraints[NewCons.agent2] | {NewCons}
 
         return A
 
@@ -219,3 +232,7 @@ class pRobustCbss:
     #                 return time1, (edge1, reversed_edge1), agent1, agent2
 
 
+# p = pRobustCbss([(848, 1), (941, 0), (39, 2), (152, 2), (953, 3)], [110, 308, 738, 460, 1020, 956, 334, 264, 459, 476, 727, 49, 810, 743, 685, 395, 377, 555, 320, 642], 0.7,
+#                 {i: 0.05 for i in range(5)}, {"Rows": 32, "Cols": 32, "Map": [0 for _ in range(32 * 32)]}, 0.05)
+#
+# print(p.Solution)
