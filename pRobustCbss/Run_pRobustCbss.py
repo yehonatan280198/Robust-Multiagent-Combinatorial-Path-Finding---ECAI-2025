@@ -31,13 +31,12 @@ def getConflict(N):
     # Iterate over unique pairs of agents
     for agent1, agent2 in combinations(N.paths.keys(), 2):
         allPosConstDict = {
-            (pos_const.x, (pos_const.agent1, pos_const.agent1_time), (pos_const.agent2, pos_const.agent2_time)): True
+            (pos_const.x, (pos_const.agent1, pos_const.agent1_time), (pos_const.agent2, pos_const.agent2_time))
             for pos_const in N.posConstraints[agent1] | N.posConstraints[agent2]}
-        path1, path2 = N.paths[agent1], N.paths[agent2]
 
         # Create loc-time dictionaries
-        locTimes1 = create_loc_times(path1)
-        locTimes2 = create_loc_times(path2)
+        locTimes1 = create_loc_times(N.paths[agent1])
+        locTimes2 = create_loc_times(N.paths[agent2])
 
         # Detect location conflicts
         for loc in locTimes1.keys() & locTimes2.keys():
@@ -51,8 +50,8 @@ def getConflict(N):
                 heapq.heappush(heap, (delta, Time, loc, (agent1, agent1_time), (agent2, agent2_time)))
 
         # Create edge-time dictionaries
-        edgeTimes1 = create_edge_times(path1)
-        edgeTimes2 = create_edge_times(path2)
+        edgeTimes1 = create_edge_times(N.paths[agent1])
+        edgeTimes2 = create_edge_times(N.paths[agent2])
 
         # Detect edge conflicts, including reversed edges
         for edge1, time1 in edgeTimes1.items():
@@ -87,16 +86,17 @@ class pRobustCbss:
         self.OPEN = PriorityQueue()  # Open list for CBS nodes, prioritized by cost
         self.Num_roots_generated = 0  # Counter for the number of root nodes generated
         self.K_optimal_sequences = {}  # Dictionary to store k-optimal sequences of allocations
-        self.K_best_sequencing_with_GLKH = kBestSequencingWithGLKH(self.Positions, self.GoalLocations, self.MapAndDims)
+        self.K_Best_Seq_Solver = kBestSequencingWithGLKH(self.Positions, self.GoalLocations, self.MapAndDims)
+        self.LowLevelPlanner = LowLevelPlan(self.MapAndDims, self.Positions, self.GoalLocations)
 
         self.Solution = self.run()
 
     ####################################################### run ############################################################
 
     def run(self):
-
         # Calculate the best sequence of task allocations (k=1)
-        self.K_optimal_sequences[1] = self.K_best_sequencing_with_GLKH.Find_K_Best_Solution(k=1)
+        self.K_optimal_sequences[1] = self.K_Best_Seq_Solver.Find_K_Best_Solution(k=1)
+        print(self.K_optimal_sequences[1])
         # Increment root node counter
         self.Num_roots_generated += 1
 
@@ -105,7 +105,7 @@ class pRobustCbss:
         # Assign the best sequence of task allocations for all agents to the root node
         Root.sequence = self.K_optimal_sequences[1]
         # Generate paths and calculate the cost for the root node
-        LowLevelPlan(Root, self.MapAndDims, self.Positions, list(range(len(self.Positions))))
+        self.LowLevelPlanner.run(Root, list(range(len(self.Positions))))
         # Add the root node to the open list
         self.OPEN.put((Root.g, Root))
 
@@ -117,13 +117,10 @@ class pRobustCbss:
             # Check if a new root needs to be generated
             N = self.CheckNewRoot(N)
 
-            if N is None:
-                continue
-
             # If the paths in the current node are verified as valid, avoiding collisions with probability P, return them as the solution
             if verify(N.paths, self.DelaysProb, self.No_collision_prob, self.VerifyAlpha):
-                return [N.paths, self.K_best_sequencing_with_GLKH.Counter_Solver_Tsp_For_Test,
-                        self.K_best_sequencing_with_GLKH.Counter_BFS_For_Test]
+                return [N.paths, self.K_Best_Seq_Solver.Counter_Solver_Tsp_For_Test,
+                        self.K_Best_Seq_Solver.Counter_BFS_For_Test]
 
             # Identify the first conflict in the paths
             const = getConflict(N)
@@ -147,13 +144,14 @@ class pRobustCbss:
     ####################################################### Check new root ############################################################
 
     def CheckNewRoot(self, N):
+        print(N.g, self.K_optimal_sequences[self.Num_roots_generated]["Cost"])
         # If the current node cost is within the threshold of the current optimal sequence
         if N.g <= self.K_optimal_sequences[self.Num_roots_generated]["Cost"]:
             return N
 
         # Generate a new root with an updated sequence
         self.Num_roots_generated += 1
-        self.K_optimal_sequences[self.Num_roots_generated] = self.K_best_sequencing_with_GLKH.Find_K_Best_Solution(
+        self.K_optimal_sequences[self.Num_roots_generated] = self.K_Best_Seq_Solver.Find_K_Best_Solution(
             k=self.Num_roots_generated)
 
         if self.K_optimal_sequences[self.Num_roots_generated]["Cost"] == math.inf:
@@ -163,11 +161,14 @@ class pRobustCbss:
         newRoot = Node()
         newRoot.sequence = self.K_optimal_sequences[self.Num_roots_generated]
         # Calculate paths and cost for the new root
-        LowLevelPlan(newRoot, self.MapAndDims, self.Positions, list(range(len(self.Positions))))
+        self.LowLevelPlanner.run(newRoot, list(range(len(self.Positions))))
 
-        self.OPEN.put((newRoot.g, newRoot))
+        if N.g <= newRoot.g:
+            self.OPEN.put((newRoot.g, newRoot))
+            return N
+
         self.OPEN.put((N.g, N))
-        return None
+        return newRoot
 
     ####################################################### Get conflict ############################################################
 
@@ -181,7 +182,7 @@ class pRobustCbss:
 
         if isinstance(NewCons, negConst):
             A.negConstraints[NewCons.agent] = A.negConstraints[NewCons.agent] | {NewCons}
-            LowLevelPlan(A, self.MapAndDims, self.Positions, [NewCons.agent])
+            self.LowLevelPlanner.run(A, [NewCons.agent])
 
         elif isinstance(NewCons, posConst):
             A.posConstraints[NewCons.agent1] = A.posConstraints[NewCons.agent1] | {NewCons}
@@ -231,8 +232,8 @@ class pRobustCbss:
     #             if (time1, reversed_edge1) in edgeTimes2:
     #                 return time1, (edge1, reversed_edge1), agent1, agent2
 
-
-# p = pRobustCbss([(848, 1), (941, 0), (39, 2), (152, 2), (953, 3)], [110, 308, 738, 460, 1020, 956, 334, 264, 459, 476, 727, 49, 810, 743, 685, 395, 377, 555, 320, 642], 0.7,
-#                 {i: 0.05 for i in range(5)}, {"Rows": 32, "Cols": 32, "Map": [0 for _ in range(32 * 32)]}, 0.05)
+#
+# p = pRobustCbss([(216, 2), (782, 2), (680, 1), (168, 3), (600, 2), (764, 2), (860, 2), (874, 0), (555, 0), (834, 2), (536, 2), (702, 3), (61, 1), (918, 3), (119, 1)], [385, 700, 917, 158, 107, 422, 697, 900, 308, 514, 800, 481, 516, 859, 509, 101, 415, 187, 69, 80, 982, 306, 271, 360, 858, 223, 698, 892, 888, 604], 0.6,
+#                 {i: 0.05 for i in range(15)}, {"Rows": 32, "Cols": 32, "Map": [0 for _ in range(32 * 32)]}, 0.05)
 #
 # print(p.Solution)

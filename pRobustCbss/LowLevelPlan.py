@@ -1,109 +1,127 @@
+from collections import deque
 from queue import PriorityQueue
-from pRobustCbss.NodeStateConstClasses import negConst, posConst
+
 from pRobustCbss.NodeStateConstClasses import State
 
 
+########################################################## Extract path #####################################################3
+def extractPath(state):
+    path = []
+    while state is not None:
+        path.insert(0, state.CurPosition)
+        state = state.parent
+
+    return path
+
+
 class LowLevelPlan:
-    def __init__(self, Node, dict_of_map_and_dim, Positions, agent_that_need_update_path):
-        self.Node = Node                                                                            # Goal allocations for agents
+    def __init__(self, dict_of_map_and_dim, Positions, GoalLocations):
         self.MapAndDims = dict_of_map_and_dim
-        self.Positions = Positions                                                                  # Initial agent locations
-        self.agent_that_need_update_path = agent_that_need_update_path
+        self.Positions = Positions
+        self.GoalLocations = set(GoalLocations)
         self.goal_heuristics = {}
 
-        self.run()
+    ########################################################## Low level plan (A*) #####################################################3
 
-    def run(self):
-        # Process each agent's Goal sequence
-        for agent in self.agent_that_need_update_path:
-            sequence = self.Node.sequence["Allocations"][agent]
+    # def run(self, Node, agent_that_need_update_path):
+    #     for agent in agent_that_need_update_path:
+    #         sequence = Node.sequence["Allocations"][agent]
+    #
+    #         # If no allocations are present
+    #         if len(sequence) == 1:
+    #             Node.paths[agent] = [self.Positions[agent]]
+    #             continue
+    #
+    #         Node.g -= (max(1, len(Node.paths[agent])) - 1)
+    #
+    #         OpenList = PriorityQueue()
+    #         S = State(self.Positions[agent])
+    #
+    #         for goal, direct in sequence[1:]:
+    #             visited = set()
+    #             OpenList.put((self.h_val(S.CurPosition[0], goal) + S.g, S))
+    #
+    #             while not OpenList.empty():
+    #                 _, S = OpenList.get()
+    #                 if S.CurPosition in visited:
+    #                     continue
+    #
+    #                 visited.add(S.CurPosition)
+    #
+    #                 if S.CurPosition == (goal, direct):
+    #                     OpenList = PriorityQueue()
+    #                     break
+    #
+    #                 for Sl in self.GetNeighbors(S, agent, visited, Node):
+    #                     OpenList.put((self.h_val(Sl.CurPosition[0], goal) + Sl.g, Sl))
+    #
+    #         # Extract the path from the final goal back to the start
+    #         Node.paths[agent] = extractPath(S)
+    #         Node.g += (len(Node.paths[agent]) - 1)
 
-            # If no allocations are present
-            if len(sequence) == 1:
-                self.Node.paths[agent] = [self.Positions[agent]]
+    ########################################################## Calculate heuristic value (BFS) #####################################################3
+    def h_val(self, currLoc, goalLoc):
+        if (currLoc, goalLoc) in self.goal_heuristics:
+            return self.goal_heuristics[(currLoc, goalLoc)]
+
+        counter_of_reach_goals = 0
+        visited = set()
+        S = State_For_h_val(currLoc)
+        queue = deque([S])
+
+        while queue:
+            current_state = queue.popleft()
+            if current_state.CurLoc in visited:
                 continue
 
-            # Decrease the previous path cost of the current agent
-            self.Node.g -= (max(1, len(self.Node.paths[agent])) - 1)
+            visited.add(current_state.CurLoc)
 
-            # Priority queue for A* search
-            OpenList = PriorityQueue()
-            # Initial state for the agent
-            S = State(self.Positions[agent])
+            if current_state.CurLoc == goalLoc:
+                return current_state.g
+            # if current_state.CurLoc in self.GoalLocations:
+            #     self.goal_heuristics[(currLoc, current_state.CurLoc)] = current_state.g
+            #     counter_of_reach_goals += 1
+            #     if counter_of_reach_goals == len(self.GoalLocations):
+            #         return self.goal_heuristics[(currLoc, goalLoc)]
 
-            # Process each goal in the sequence
-            for goal in sequence:
-                # Calculate f-value and add to open list
-                f_val = self.calc_heuristic_value(S.CurPosition, goal) + S.g
-                OpenList.put((f_val, S))
+            for Sl in self.GetNeighborsBFS(current_state):
+                if Sl.CurLoc not in visited:
+                    queue.append(Sl)
 
-                while not OpenList.empty():
-                    # Get the state with the lowest f-value
-                    _, S = OpenList.get()
+    ########################################################## Get neighbors (BFS) #####################################################3
+    def GetNeighborsBFS(self, state):
+        neighbors = set()
+        loc = state.CurLoc
 
-                    # Check if the goal is reached
-                    if S.CurPosition[0] == goal:
-                        # Reset the open list for the next goal
-                        OpenList = PriorityQueue()
-                        break
+        for neighborLoc in [loc + 1, loc + self.MapAndDims["Cols"], loc - 1, loc - self.MapAndDims["Cols"]]:
+            if self.checkIfNextMoveIsValid(loc, neighborLoc):
+                neighbors.add(State_For_h_val(neighborLoc, state.g + 1, state))
 
-                    # Get neighbors and add them to the open list
-                    neighbors = self.GetNeighbors(S, agent)
-                    for Sl in neighbors:
-                        f_val = self.calc_heuristic_value(Sl.CurPosition, goal) + Sl.g
-                        OpenList.put((f_val, Sl))
+        return neighbors
 
-            # Extract the path from the final goal back to the start
-            path = []
-            while S is not None:
-                path.insert(0, S.CurPosition)
-                S = S.parent
+    ########################################################## Check if next move is valid (BFS) #####################################################3
+    def checkIfNextMoveIsValid(self, loc, neighborLoc):
+        # If the agent is at the top or bottom boundary, it cannot move up or down
+        if not (0 <= neighborLoc < self.MapAndDims["Cols"] * self.MapAndDims["Rows"]):
+            return False
 
-            # Append the path for the current goal to the agent's path
-            self.Node.paths[agent] = path
-            # Update the total cost
-            self.Node.g += (len(path) - 1)
+        # If the agent is at the right boundary, it cannot move right
+        if loc % self.MapAndDims["Cols"] == self.MapAndDims["Cols"] - 1 and neighborLoc % self.MapAndDims[
+            "Cols"] == 0:
+            return False
 
-    def calc_heuristic_value(self, CurPosition, goal):
+        # If the agent is at the left boundary, it cannot move left
+        if loc % self.MapAndDims["Cols"] == 0 and neighborLoc % self.MapAndDims["Cols"] == self.MapAndDims[
+            "Cols"] - 1:
+            return False
 
-        # Check if the heuristic value for this position and goal has already been calculated
-        item = (CurPosition, goal)
-        if item in self.goal_heuristics:
-            return self.goal_heuristics[item]
+        if self.MapAndDims["Map"][neighborLoc] != 0:
+            return False
 
-        # cur_location divided by num_of_cols gives CurRow, remainder gives CurCol
-        CurRow, CurCol = divmod(CurPosition[0], self.MapAndDims["Cols"])
-        # goal divided by num_of_cols gives GoalRow, remainder gives GoalCol
-        GoalRow, GoalCol = divmod(goal, self.MapAndDims["Cols"])
-        # Compute Manhattan distance
-        time = abs(CurRow - GoalRow) + abs(CurCol - GoalCol)
+        return True
 
-        # If the current position is already at the goal, the heuristic is 0
-        if time == 0:
-            self.goal_heuristics[item] = 0
-            return 0
-
-        # Determine the direction the agent needs to move to reach the goal
-        up_or_down = 3 if CurRow > GoalRow else (1 if CurRow < GoalRow else -1)
-        left_or_right = 2 if CurCol > GoalCol else (0 if CurCol < GoalCol else -1)
-
-        # If the agent is neither in the same row nor the same column as the goal, and is facing a direction that moves it closer to the goal
-        if (CurPosition[1] == up_or_down or CurPosition[1] == left_or_right) and up_or_down != -1 and left_or_right != -1:
-            self.goal_heuristics[item] = time + 1
-            return time + 1
-
-        # If the agent is in the same row or column as the goal
-        elif up_or_down == -1 or left_or_right == -1:
-            goalDirect = max(up_or_down, left_or_right)
-            countRotate = abs(goalDirect - CurPosition[1]) if abs(goalDirect - CurPosition[1]) != 3 else 1
-            self.goal_heuristics[item] = time + countRotate
-            return time + countRotate
-
-        # The agent needs to change direction twice to reach the goal, add 2 to the Manhattan distance
-        self.goal_heuristics[item] = time + 2
-        return time + 2
-
-    def GetNeighbors(self, state, agent):
+    ########################################################## Get neighbors (A*) #####################################################3
+    def GetNeighbors(self, state, agent, visited, Node):
         neighbors = set()
         loc, direct = state.CurPosition
 
@@ -112,7 +130,8 @@ class LowLevelPlan:
 
         # Try moving in the current direction
         loc_after_move = candidates[direct]
-        if self.validateMove(loc_after_move, agent, state):
+        canMove = self.validateMove(loc_after_move, agent, state, Node)
+        if canMove == 1:
             neighbors.add(State((loc_after_move, direct), state.g + 1, state))
 
         # Try turning left
@@ -124,42 +143,97 @@ class LowLevelPlan:
         neighbors.add(State((loc, new_direction), state.g + 1, state))
 
         # Stay in the same place but increment g (cost)
-        neighbors.add(State((loc, direct), state.g + 1, state))
+        if canMove == -1:
+            neighbors.add(State((loc, direct), state.g + 1, state))
+            visited.remove(state.CurPosition)
 
         return neighbors
 
-    def validateMove(self, loc_after_move, agent, state):
+    ########################################################## Check if next move is valid (A*) #####################################################3
+    def validateMove(self, loc_after_move, agent, state, Node):
         # Extract the agent's location and direction before taking the next step
         loc, _ = state.CurPosition
+        max_cells = self.MapAndDims["Cols"] * self.MapAndDims["Rows"]
 
         # If the agent is at the top or bottom boundary, it cannot move up or down
-        if not (0 <= loc_after_move < self.MapAndDims["Cols"] * self.MapAndDims["Rows"]):
-            return False
+        if not (0 <= loc_after_move < max_cells):
+            return 0
 
         # If the agent is at the right boundary, it cannot move right
-        if loc % self.MapAndDims["Cols"] == self.MapAndDims["Cols"] - 1 and loc_after_move % self.MapAndDims["Cols"] == 0:
-            return False
+        if loc % self.MapAndDims["Cols"] == self.MapAndDims["Cols"] - 1 and loc_after_move % self.MapAndDims[
+            "Cols"] == 0:
+            return 0
 
         # If the agent is at the left boundary, it cannot move left
-        if loc % self.MapAndDims["Cols"] == 0 and loc_after_move % self.MapAndDims["Cols"] == self.MapAndDims["Cols"] - 1:
-            return False
+        if loc % self.MapAndDims["Cols"] == 0 and loc_after_move % self.MapAndDims["Cols"] == self.MapAndDims[
+            "Cols"] - 1:
+            return 0
 
         if self.MapAndDims["Map"][loc_after_move] != 0:
-            return False
+            return 0
 
         # Check if the move violates any negative constraints
-        for neg_const in self.Node.negConstraints[agent]:
-            if neg_const.t == state.g + 1 and (neg_const.x == loc_after_move or neg_const.x == frozenset((loc, loc_after_move))):
-                return False
+        for neg_const in Node.negConstraints[agent]:
+            if neg_const.t == state.g + 1 and (
+                    neg_const.x == loc_after_move or neg_const.x == frozenset((loc, loc_after_move))):
+                return -1
 
-        for pos_const in self.Node.posConstraints[agent]:
-            if pos_const.agent1 == agent and pos_const.agent1_time == state.g + 1 and (pos_const.x != loc_after_move and pos_const.x != frozenset((loc, loc_after_move))):
-                return False
+        for pos_const in Node.posConstraints[agent]:
+            if pos_const.agent1 == agent and pos_const.agent1_time == state.g + 1 and (
+                    pos_const.x != loc_after_move and pos_const.x != frozenset((loc, loc_after_move))):
+                return -1
 
-            if pos_const.agent2 == agent and pos_const.agent2_time == state.g + 1 and (pos_const.x != loc_after_move and pos_const.x != frozenset((loc, loc_after_move))):
-                return False
+            if pos_const.agent2 == agent and pos_const.agent2_time == state.g + 1 and (
+                    pos_const.x != loc_after_move and pos_const.x != frozenset((loc, loc_after_move))):
+                return -1
 
-        return True
+        return 1
+
+    def run(self, Node, agent_that_need_update_path):
+        # Process each agent's Goal sequence
+        for agent in agent_that_need_update_path:
+            sequence = Node.sequence["Allocations"][agent]
+
+            # If no allocations are present
+            if len(sequence) == 1:
+                Node.paths[agent] = [self.Positions[agent]]
+                continue
+
+            # Decrease the previous path cost of the current agent
+            Node.g -= (max(1, len(Node.paths[agent])) - 1)
+
+            # Priority queue for A* search
+            queue = deque([])
+            # Initial state for the agent
+            S = State(self.Positions[agent])
+
+            # Process each goal in the sequence
+            for goal, direct in sequence:
+                visited = set()
+                queue.append(S)
+
+                while queue:
+                    # Get the state with the lowest f-value
+                    S = queue.popleft()
+                    if S.CurPosition in visited:
+                        continue
+
+                    visited.add(S.CurPosition)
+
+                    # Check if the goal is reached
+                    if S.CurPosition == (goal, direct):
+                        # Reset the open list for the next goal
+                        queue = deque([])
+                        break
+
+                    # Get neighbors and add them to the open list
+                    neighbors = self.GetNeighbors(S, agent, visited, Node)
+                    for Sl in neighbors:
+                        queue.append(Sl)
+
+            # Extract the path from the final goal back to the start
+            Node.paths[agent] = extractPath(S)
+            Node.g += (len(Node.paths[agent]) - 1)
 
     # def GetNeighborsOriginal(self, state, agent):
     #     neighbors = set()
@@ -174,12 +248,25 @@ class LowLevelPlan:
     #     return neighbors
 
 
+class State_For_h_val:
 
+    def __init__(self, CurLoc, g=0, parent=None):
+        # The current location (position and direction) of the agent
+        self.CurLoc = CurLoc
+        # Cost to reach this state from the initial state
+        self.g = g
+        # Parent state for path reconstruction
+        self.parent = parent
 
+    # Define equality based on current location and cost
+    def __eq__(self, other):
+        return isinstance(other, State_For_h_val) and self.CurLoc == other.CurLoc and self.g == other.g
 
+    # Define a hash function based on current location and cost
+    def __hash__(self):
+        return hash((self.CurLoc, self.g))
 
-
-
-
-
+    # Define less-than for ordering, based on cost g
+    def __lt__(self, other):
+        return self.g < other.g
 

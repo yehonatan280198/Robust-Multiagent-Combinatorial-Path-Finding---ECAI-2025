@@ -20,12 +20,7 @@ def generateMtspPar():
 
 ####################################################### Create 4 copies of specific goal ############################################################
 def createCopyOfGoals(GoalLocations):
-    listOfTuplesOfGoals = []
-    for goal in GoalLocations:
-        for direct in range(4):
-            listOfTuplesOfGoals.append((goal, direct))
-
-    return listOfTuplesOfGoals
+    return [(goal, direct) for goal in GoalLocations for direct in range(4)]
 
 
 ######################################################### kBestSequencingWithGLKH class ###############################################################
@@ -120,6 +115,8 @@ class kBestSequencingWithGLKH:
                         cmat[row, col] = -(100000 - self.precomputed_cost[((rowLoc, rowDirect), (colLoc, colDirect))])
                     elif (rowLoc, colLoc) in excludeE:
                         cmat[row, col] = 99999
+                    elif (row < len(self.Positions) and col < len(self.Positions)) or (row >= len(self.Positions) > col):
+                        cmat[row, col] = 0
                     else:
                         cmat[row, col] = self.precomputed_cost[((rowLoc, rowDirect), (colLoc, colDirect))]
 
@@ -156,6 +153,7 @@ class kBestSequencingWithGLKH:
 
     ############################################################# Invoke GLKH ####################################################################
     def Invoke_GLKH(self, includeE):
+        print("hi")
         cmd = [f"{os.getcwd()}/GLKH-1.1/GLKH", f"{os.getcwd()}/files/Mtsp.par"]
         self.Counter_Solver_Tsp_For_Test += 1
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -169,27 +167,27 @@ class kBestSequencingWithGLKH:
             ix = 6  # Starting index of the tour in the output file
             val = int(lines[ix])
             currAgentTour = []
-            tour = []
             agent = -1
             first = True
 
+            a = []
             # Read until the end of the tour
             while val != -1:
-                goalLoc, _ = self.AllPosAndGoals[val - 1]
-                tour.append(goalLoc)
+                a.append(self.AllPosAndGoals[val - 1])
+                goalLoc, goalDir = self.AllPosAndGoals[val - 1]
                 if first:
                     agent = val - 1
-                    currAgentTour.append(goalLoc)
+                    currAgentTour.append((goalLoc, goalDir))
                     first = False
 
                 # If it's a new agent
                 elif not first and val <= len(self.Positions):
                     mtsp_tours["Allocations"][agent] = currAgentTour
-                    currAgentTour = [goalLoc]
+                    currAgentTour = [(goalLoc, goalDir)]
                     agent = val - 1
                 else:
-                    mtsp_tours["Alloc_edges"].append((currAgentTour[-1], goalLoc))
-                    currAgentTour.append(goalLoc)
+                    mtsp_tours["Alloc_edges"].append((currAgentTour[-1][0], goalLoc))
+                    currAgentTour.append((goalLoc, goalDir))
 
                 ix = ix + 1
                 val = int(lines[ix])
@@ -197,24 +195,23 @@ class kBestSequencingWithGLKH:
             # Add the final agent's tour
             mtsp_tours["Allocations"][agent] = currAgentTour
 
-            for index, (v0, v1) in enumerate(mtsp_tours["Alloc_edges"]):
-                if (v0, v1) in includeE:
-                    mtsp_tours["Cost"] += 100000
+            mtsp_tours["Cost"] += (len(includeE)*100000)
 
         return mtsp_tours
 
     ############################################################# Precompute all the costs ####################################################################
     def Precompute_All_The_Costs(self):
-        precomputed_cost = defaultdict(int)
+        precomputed_cost = defaultdict(lambda: 100000)
 
         for index, pos in enumerate(self.AllPosAndGoals):
+            print(index)
             self.BFS(pos, precomputed_cost)
 
         return precomputed_cost
 
     def BFS(self, pos, precomputed_cost):
-        counter_of_reach_goals = 0
         self.Counter_BFS_For_Test += 1
+        counter_of_reach_goals = 0
         visited = set()
         S = State(pos)
         queue = deque([S])
@@ -228,7 +225,6 @@ class kBestSequencingWithGLKH:
 
             if current_state.CurPosition in self.AllCopyOfGoals and current_state.CurPosition != pos:
                 precomputed_cost[(pos, current_state.CurPosition)] = current_state.g
-
                 counter_of_reach_goals += 1
                 if counter_of_reach_goals == len(self.AllCopyOfGoals) or (counter_of_reach_goals == len(self.AllCopyOfGoals) - 1 and pos in self.AllCopyOfGoals):
                     return
@@ -262,6 +258,7 @@ class kBestSequencingWithGLKH:
     def validateMove(self, loc_after_move, S):
         # Extract the agent's location and direction before taking the next step
         loc, _ = S.CurPosition
+
         # If the agent is at the top or bottom boundary, it cannot move up or down
         if not (0 <= loc_after_move < self.MapAndDims["Cols"] * self.MapAndDims["Rows"]):
             return False
@@ -290,20 +287,20 @@ class kBestSequencingWithGLKH:
 # # # p = kBestSequencingWithGLKH([(850, 0), (564, 0), (557, 1), (337, 1), (252, 2)], [248, 885, 318, 64, 75, 614, 893, 147, 770, 62, 204, 353, 926, 34, 796, 111, 28, 810, 776, 1008], d)
 # p.Find_K_Best_Solution(4)
 
-d = {"Rows": 12, "Cols": 12, "Map": [0 for _ in range(12 * 12)]}
-p = kBestSequencingWithGLKH([(5, 1), (55, 2), (75, 0)], [29, 53, 77], d)
-for i in range(1, 62):
-    print(i, p.Find_K_Best_Solution(i))
+# d = {"Rows": 12, "Cols": 12, "Map": [0 for _ in range(12 * 12)]}
+# p = kBestSequencingWithGLKH([(5, 1), (55, 2), (75, 0)], [29, 53, 77], d)
+# for i in range(1, 62):
+#     print(i, p.Find_K_Best_Solution(i))
+# #
+# # p = kBestSequencingWithGLKH([(31, 2)], [5, 29, 53], d)
+# p = kBestSequencingWithGLKH([(5, 1), (31, 2), (51, 0)], [29, 53], d)
+# for i in range(1, 14):
+#     print(p.Find_K_Best_Solution(i))
 #
-# p = kBestSequencingWithGLKH([(31, 2)], [5, 29, 53], d)
-p = kBestSequencingWithGLKH([(5, 1), (31, 2), (51, 0)], [29, 53], d)
-for i in range(1, 14):
-    print(p.Find_K_Best_Solution(i))
-
-p = kBestSequencingWithGLKH([(50,0), (89,3)], [17, 56], d)
-for i in range(1, 8):
-    print(p.Find_K_Best_Solution(i))
-
-p = kBestSequencingWithGLKH([(74,0)], [41, 80, 5], d)
-for i in range(1, 8):
-    print(p.Find_K_Best_Solution(i))
+# p = kBestSequencingWithGLKH([(50,0), (89,3)], [17, 56], d)
+# for i in range(1, 8):
+#     print(p.Find_K_Best_Solution(i))
+#
+# p = kBestSequencingWithGLKH([(74,0)], [41, 80, 5], d)
+# for i in range(1, 8):
+#     print(p.Find_K_Best_Solution(i))

@@ -6,7 +6,6 @@ from scipy.stats import norm
 
 
 def run_s_simulations(s0, paths, delaysProb):
-    # Counter for successful simulations (no collisions)
     count_success = 0
 
     # Run s0 simulations

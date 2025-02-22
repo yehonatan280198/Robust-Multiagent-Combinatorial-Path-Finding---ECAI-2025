@@ -18,8 +18,16 @@ def create_map(name):
         lines = file.readlines()
     map_start_index = lines.index("map\n") + 1
     map_lines = lines[map_start_index:]
-    currMap = [0 if char == "." else 1 for line in map_lines for char in line.strip()]
-    return {"Rows": 32, "Cols": 32, "Map": currMap}
+
+    currMap = []
+    rows, cols = 0, 0
+    for line in map_lines:
+        cols = len(line.strip())
+        rows += 1
+        for char in line.strip():
+            currMap += [0] if char == "." else [1]
+
+    return {"Rows": rows, "Cols": cols, "Map": currMap}
 
 
 def read_locs_from_file(mapName, num_of_iter, num_of_agent, num_of_goals):
@@ -41,13 +49,16 @@ def run_pRobustCbss(queue, Positions, GoalLocations, No_collision_prob, DelaysPr
     queue.put(p.Solution)
 
 
-mapsList = ["empty-32-32.map", "random-32-32-20.map", "maze-32-32-2.map", "room-32-32-4.map"]
+# mapsList = ["empty-32-32.map", "random-32-32-20.map", "maze-32-32-2.map", "room-32-32-4.map"]
+mapsList = ["den312d.map"]
+num_of_agentsList = [5]
+num_of_goalsList = [10]
 # num_of_agentsList = [3, 5, 10, 15, 20, 25]
 # num_of_goalsList = [6, 10, 20, 30, 40, 50]
 # no_collision_probList = [0.6, 0.7, 0.8]
 # delays_probList = [0.05, 0.3]
-num_of_agentsList = [5, 15, 25]
-num_of_goalsList = [10, 30, 50]
+# num_of_agentsList = [5, 15, 25]
+# num_of_goalsList = [10, 30, 50]
 no_collision_probList = [0.6]
 delays_probList = [0.05]
 iterations = 10
@@ -65,9 +76,10 @@ for map_name in mapsList:
                     statisticConfig = {"Success": 0, "ElapsedTimeOfSuccess": 0, "CallToBFS": 0, "CallToTSP": 0,
                                        "TotalTime": 0}
 
-                    for iteration in range(iterations):
+                    for iteration in range(10):
                         AgentsPositions, GoalsLocations = read_locs_from_file(map_name, iteration, numAgents, numGoals)
 
+                        print(f"map: {map_name}, no collision prob: {no_collision_prob}, delay prob: {delaysProb}")
                         print("AgentsPositions:", AgentsPositions)
                         print("GoalsLocations:", GoalsLocations)
 
