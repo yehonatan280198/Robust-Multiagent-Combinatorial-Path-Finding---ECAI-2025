@@ -2,4 +2,6 @@
 
 This repository implements the core algorithms and methods described in the paper "Robust Multi-Agent Combinatorial Path Finding".
 
+## Files overview
 
+* FindConflict.py - 
