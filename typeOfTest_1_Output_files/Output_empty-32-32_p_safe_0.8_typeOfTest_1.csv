@@ -1,0 +1,4 @@
+Map,Safe prob,Delay prob,Number of agents,Number of goals,Instance,Algorithm,Runtime,Calls to EGTSP\TSP,Calls to LowLevel,Number of roots generated,Resolved conflicts
+empty-32-32,0.8,0.1,3,6,1,pRobustCbss,0.53128,1,1,1,0
+empty-32-32,0.8,0.1,3,6,1,baseline1,1.90278,70,18,18,0
+empty-32-32,0.8,0.1,3,6,2,pRobustCbss,0.48005,1,1,1,0
