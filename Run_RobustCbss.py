@@ -10,7 +10,7 @@ from kBestSequencing import kBestSequencing
 from kBestSequencingWithGLKH import kBestSequencingWithGLKH
 
 
-class pRobustCbss:
+class RobustCbss:
 
     def __init__(self, Positions, GoalLocations, no_collision_prob, delaysProb, MapAndDims, verifyAlpha, algorithm, configStr):
         self.Positions = Positions  # Initial positions of agents
@@ -23,7 +23,7 @@ class pRobustCbss:
         self.Num_roots_generated = 0  # Counter for the number of root nodes generated
         self.K_optimal_sequences = {}  # Dictionary to store k-optimal sequences of allocations
 
-        if algorithm in ["pRobustCbss", "baseline2", "baseline3"]:
+        if algorithm in ["RobustCbss", "IDP", "IRC"]:
             self.K_Best_Seq_Solver = kBestSequencingWithGLKH(self.Positions, self.GoalLocations, MapAndDims, configStr)
         else:
             self.K_Best_Seq_Solver = kBestSequencing(self.Positions, self.GoalLocations, MapAndDims, configStr)
@@ -86,7 +86,7 @@ class pRobustCbss:
                 if A2 is not None:
                     self.OPEN.put((A2.g, A2))
 
-            if self.algorithm != "baseline2":
+            if self.algorithm != "IDP":
                 A3 = self.GenChild(N, (agent1AndTime[0], agent2AndTime[0], x, agent1AndTime[1], agent2AndTime[1]))
                 self.OPEN.put((A3.g, A3))
 

@@ -66,7 +66,7 @@ class FindConflict:
         self.randGen = random.Random(42)
 
     def findConflict(self, N):
-        if self.algorithm in ["pRobustCbss", "baseline1", "baseline3"]:
+        if self.algorithm in ["RobustCbss", "TSPA", "IRC"]:
             return self.findConflictWithDelays(N)
         else:
             return findConflictWithoutDelays(N)

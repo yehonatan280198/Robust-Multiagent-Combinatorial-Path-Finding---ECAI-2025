@@ -15,7 +15,7 @@ def create_positions_for_agents_And_Locs_For_Goals(NumAgents, NumGoals, MapAndDi
 
 
 def read_map_file(file_path):
-    with open("/home/yonikid/Desktop/SimulatorAgents/Start-Kit-main/example_problems/OurResearch.domain/" + file_path, 'r') as f:
+    with open("OurResearch.domain/" + file_path, 'r') as f:
         lines = f.readlines()
 
     map_start_index = lines.index("map\n") + 1
@@ -39,7 +39,7 @@ os.makedirs(output_dir, exist_ok=True)
 for map_name in mapsList:
     mapAndDim = read_map_file(map_name)
     for instance in range(100):
-        AgentsPositions, GoalsLocations = create_positions_for_agents_And_Locs_For_Goals(35, 70, mapAndDim)
+        AgentsPositions, GoalsLocations = create_positions_for_agents_And_Locs_For_Goals(50, 100, mapAndDim)
 
         agents_file = os.path.join(output_dir,
                                    f"{map_name.split('.')[0]}_Map_Agent_Locs_instance_{instance}.txt")

@@ -11,12 +11,12 @@ class Simulation_for_type2_test:
         self.SOC = 0
 
     def runSimulation(self):
-        if self.algorithm in ["pRobustCbss", "baseline2"]:
-            return self.run_simulation_for_baseline0or2()
+        if self.algorithm in ["RobustCbss", "IDP"]:
+            return self.run_simulation_for_RobustCbssOrIDP()
         else:
-            return self.run_simulation_for_baseline3()
+            return self.run_simulation_for_IRC()
 
-    def run_simulation_for_baseline0or2(self):
+    def run_simulation_for_RobustCbssOrIDP(self):
         # Initialize the set of active agents (agents that have not finished their path)
         active_agents = {agent for agent, path in self.plan.items() if len(path) > 1}
         # Flag to indicate if a collision occurs
@@ -68,7 +68,7 @@ class Simulation_for_type2_test:
 
         return True
 
-    def run_simulation_for_baseline3(self):
+    def run_simulation_for_IRC(self):
         # Initialize the set of active agents (agents that have not finished their path)
         active_agents = {agent for agent, path in self.plan.items() if len(path) > 1}
         # Flag to indicate if a collision occurs

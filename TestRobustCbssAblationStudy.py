@@ -6,13 +6,13 @@ import ast
 import sys
 
 from multiprocessing import Process, Queue
-from Run_pRobustCbss import pRobustCbss
-from Simulation_for_type2_test import Simulation_for_type2_test
+from Run_RobustCbss import RobustCbss
+from Simulation_for_AblationStudy import Simulation_for_type2_test
 
 
 ####################################################### Create Map #################################################################################
 def create_map(map_name):
-    file_path = f"/home/yonikid/Desktop/SimulatorAgents/pRobustCbss/OurResearch.domain/{map_name}.map"
+    file_path = f"OurResearch.domain/{map_name}.map"
     with open(file_path, "r") as file:
         lines = file.readlines()
     map_start_index = lines.index("map\n") + 1
@@ -33,7 +33,7 @@ def create_map(map_name):
 mapName = sys.argv[1]
 mapAndDim = create_map(mapName)
 p_safe = float(sys.argv[2])
-configStr = f"{mapName}_p_safe_{p_safe}_typeOfTest_2"
+configStr = f"{mapName}_p_safe_{p_safe}_typeOfTest_3"
 
 mapsList = ["empty-32-32", "random-32-32-20", "maze-32-32-2", "room-32-32-4", "den312d", "ht_chantry", "lak303d",
             "den520d"]
@@ -45,11 +45,12 @@ instances = 20
 verifyAlpha = 0.05
 max_time = 60
 
-####################################################### Write the header of a CSV file ############################################################
-if not os.path.exists("typeOfTest_2_Output_files"):
-    os.makedirs("typeOfTest_2_Output_files")
 
-with open(f"typeOfTest_2_Output_files/Output_{configStr}.csv", mode="w", newline="",
+####################################################### Write the header of a CSV file ############################################################
+if not os.path.exists("typeOfTest_3_Output_files"):
+    os.makedirs("typeOfTest_3_Output_files")
+
+with open(f"typeOfTest_3_Output_files/Output_{configStr}.csv", mode="w", newline="",
           encoding="utf-8") as file:
     columns = ["Map", "Safe prob", "Delay prob", "Number of agents", "Number of goals", "Instance", "Algorithm",
                "Runtime", "Offline runtime", "Online runtime", "Planner calls", "Sum Of Cost"]
@@ -78,8 +79,8 @@ def run_Test(queue, Positions, GoalLocations, DelaysProbDict, CurrAlgorithm):
     while True:
         callToPlanner += 1
         offline_start_time = time.time()
-        p = pRobustCbss(Positions, GoalLocations, p_safe, DelaysProbDict, mapAndDim, verifyAlpha, CurrAlgorithm,
-                        configStr)
+        p = RobustCbss(Positions, GoalLocations, p_safe, DelaysProbDict, mapAndDim, verifyAlpha, CurrAlgorithm,
+                       configStr)
         OfflineTime += (time.time() - offline_start_time)
 
         online_start_time = time.time()
@@ -104,9 +105,9 @@ def run_instances():
     for instance in range(instances):
         AgentsPositions, GoalsLocations = read_locs_from_file(instance)
 
-        for CurrAlgorithm in ["pRobustCbss", "baseline2", "baseline3"]:
+        for CurrAlgorithm in ["RobustCbss", "IDP", "IRC"]:
 
-            print(f"typeOfTest: 2, algorithm: {CurrAlgorithm}, map: {mapName}, safe prob: {p_safe}, delay prob: {CurrDelaysProb}, agents: {CurrNumAgents}, goals: {CurrNumGoals}, instance: {instance}")
+            print(f"typeOfTest: 3, algorithm: {CurrAlgorithm}, map: {mapName}, safe prob: {p_safe}, delay prob: {CurrDelaysProb}, agents: {CurrNumAgents}, goals: {CurrNumGoals}, instance: {instance}")
             print(f"AgentsPositions: {AgentsPositions} \n GoalsLocations: {GoalsLocations}")
 
             queue = Queue()
@@ -141,7 +142,7 @@ def addRecordToCsv(instance, CurrAlgorithm, runtime, offlineRuntime, onlineRunti
     record = [mapName, p_safe, CurrDelaysProb, CurrNumAgents, CurrNumGoals, instance+1, CurrAlgorithm, runtime,
               offlineRuntime, onlineRuntime, callToPlanner, soc]
 
-    with open(f"typeOfTest_2_Output_files/Output_{configStr}.csv", mode="a", newline="", encoding="utf-8") as file:
+    with open(f"typeOfTest_3_Output_files/Output_{configStr}.csv", mode="a", newline="", encoding="utf-8") as file:
         writerRecord = csv.writer(file)
         writerRecord.writerow(record)
 

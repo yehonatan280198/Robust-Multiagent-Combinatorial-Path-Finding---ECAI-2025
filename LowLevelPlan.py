@@ -26,7 +26,7 @@ class LowLevelPlan:
     ########################################################## Low level plan #####################################################
 
     def runLowLevelPlan(self, Node, agent_that_need_update_path):
-        if self.algorithm in ["pRobustCbss", "baseline1", "baseline2"]:
+        if self.algorithm in ["RobustCbss", "TSPA", "IDP"]:
             return self.runLowLevelPlanWithRotations(Node, agent_that_need_update_path)
         else:
             return self.runLowLevelPlanWithoutRotations(Node, agent_that_need_update_path)

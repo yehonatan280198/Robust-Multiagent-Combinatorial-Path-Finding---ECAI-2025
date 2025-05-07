@@ -5,12 +5,12 @@ import ast
 import sys
 
 from multiprocessing import Process, Queue
-from Run_pRobustCbss import pRobustCbss
+from Run_RobustCbss import RobustCbss
 
 
 ####################################################### Create Map #################################################################################
 def create_map(map_name):
-    file_path = f"/home/yonikid/Desktop/SimulatorAgents/pRobustCbss/OurResearch.domain/{map_name}.map"
+    file_path = f"OurResearch.domain/{map_name}.map"
     with open(file_path, "r") as file:
         lines = file.readlines()
     map_start_index = lines.index("map\n") + 1
@@ -36,8 +36,8 @@ cache_successes = {}
 
 
 mapsList = ["empty-32-32", "random-32-32-20", "maze-32-32-2", "room-32-32-4", "den312d", "ht_chantry", "lak303d", "den520d"]
-num_of_agentsList = [3, 5, 8, 10, 15, 20, 25]
-num_of_goalsList = [6, 10, 16, 20, 30, 40, 50]
+num_of_agentsList = [10, 15, 20, 25, 30, 40, 50]
+num_of_goalsList = [20, 30, 40, 50, 60, 80, 100]
 no_collision_probList = [0.8, 0.9, 0.95]
 delays_probList = [0.1, 0.3]
 instances = 20
@@ -74,7 +74,7 @@ def read_locs_from_file(num_of_instance):
 ####################################################### run Test  #################################################################################
 def run_Test(queue, Positions, GoalLocations, DelaysProbDict, CurrAlgorithm):
 
-    p = pRobustCbss(Positions, GoalLocations, p_safe, DelaysProbDict, mapAndDim, verifyAlpha, CurrAlgorithm, configStr)
+    p = RobustCbss(Positions, GoalLocations, p_safe, DelaysProbDict, mapAndDim, verifyAlpha, CurrAlgorithm, configStr)
     queue.put((p.Solution[1], p.Solution[2], p.Solution[3], p.Solution[4]))
 
 
@@ -83,14 +83,13 @@ def run_Test(queue, Positions, GoalLocations, DelaysProbDict, CurrAlgorithm):
 def run_instances():
     delaysProbDict = {i: CurrDelaysProb for i in range(CurrNumAgents)}
     curr_cache_successes = {
-        ("pRobustCbss", (CurrDelaysProb, CurrNumAgents, CurrNumGoals)): 0,
-        ("baseline1", (CurrDelaysProb, CurrNumAgents, CurrNumGoals)): 0
+        ("RobustCbss", (CurrDelaysProb, CurrNumAgents, CurrNumGoals)): 0
     }
 
     for instance in range(instances):
         AgentsPositions, GoalsLocations = read_locs_from_file(instance)
 
-        for CurrAlgorithm in ["pRobustCbss", "baseline1"]:
+        for CurrAlgorithm in ["RobustCbss"]:
 
             if not checkIfNeedRunThisTest(CurrAlgorithm):
                 addRecordToCsv(instance, CurrAlgorithm, None, None, None, None, None)
@@ -125,8 +124,7 @@ def run_instances():
             curr_cache_successes[(CurrAlgorithm, (CurrDelaysProb, CurrNumAgents, CurrNumGoals))] += 1
             addRecordToCsv(instance, CurrAlgorithm, runtime, CallToEGTSP, CallToLowLevel, Roots, ResolvedConflicts)
 
-    cache_successes[("pRobustCbss", (CurrDelaysProb, CurrNumAgents, CurrNumGoals))] = curr_cache_successes[("pRobustCbss", (CurrDelaysProb, CurrNumAgents, CurrNumGoals))]
-    cache_successes[("baseline1", (CurrDelaysProb, CurrNumAgents, CurrNumGoals))] = curr_cache_successes[("baseline1", (CurrDelaysProb, CurrNumAgents, CurrNumGoals))]
+    cache_successes[("RobustCbss", (CurrDelaysProb, CurrNumAgents, CurrNumGoals))] = curr_cache_successes[("RobustCbss", (CurrDelaysProb, CurrNumAgents, CurrNumGoals))]
 
 
 def addRecordToCsv(instance, CurrAlgorithm, runtime, CallToEGTSP, CallToLowLevel, Roots, ResolvedConflicts):
