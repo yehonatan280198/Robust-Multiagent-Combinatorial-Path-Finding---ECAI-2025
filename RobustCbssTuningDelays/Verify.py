@@ -49,7 +49,11 @@ class Verify:
         # Run s0 simulations
         for sim in range(s0):
             # Create a copy of the paths for independent simulation
-            paths_copy = {agent: list(path) for agent, path in paths.items()}
+            paths_copy = {
+                agent: {"path": list(info["path"]), "cost": info["cost"]}
+                for agent, info in paths.items()
+            }
+
             # Initialize the set of active agents (agents that have not finished their path)
             active_agents = {agent for agent, path in paths_copy.items() if len(path) > 1}
             # Flag to indicate if a collision occurs
@@ -63,15 +67,15 @@ class Verify:
 
                 for agent, path in paths_copy.items():
                     # Current path of the agent
-                    lastLoc = path[0]
+                    lastLoc = path["path"][0]
 
                     # Simulate agent movement with a delay probability
-                    if len(path) != 1 and self.randGen.random() > self.delaysProb[agent]:
+                    if len(path["path"]) != 1 and self.randGen.random() > self.delaysProb[agent]:
                         # Remove the first step if the agent moves
-                        path.pop(0)
+                        path["path"].pop(0)
 
                     # Current location of the agent
-                    loc = path[0]
+                    loc = path["path"][0]
                     # Check for collision
                     if loc in locsAndEdge or (loc, lastLoc) in locsAndEdge:
                         collision = True
@@ -80,7 +84,7 @@ class Verify:
                     locsAndEdge.add((lastLoc, loc))
 
                     # If the agent has reached its destination, mark it for removal
-                    if len(path) == 1:
+                    if len(path["path"]) == 1:
                         finish_agents.add(agent)
 
                 # Stop the simulation if a collision occurs

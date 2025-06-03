@@ -84,7 +84,7 @@ class RobustCbssTuningDelays:
     ####################################################### Check new root ############################################################
 
     def CheckNewRoot(self, N):
-        # print(f"{N.g}, {self.K_optimal_sequences[self.Num_roots_generated]['Cost']}")
+        print(f"{N.g}, {self.K_optimal_sequences[self.Num_roots_generated]['Cost']}")
 
         # If the current node cost is within the threshold of the current optimal sequence
         if N.g <= self.K_optimal_sequences[self.Num_roots_generated]["Cost"]:
@@ -115,7 +115,10 @@ class RobustCbssTuningDelays:
                                        {agent: constraints.copy() for agent, constraints in N.negConstraints.items()})
         A.posConstraints = defaultdict(set,
                                        {agent: constraints.copy() for agent, constraints in N.posConstraints.items()})
-        A.paths = defaultdict(list, {agent: path[:] for agent, path in N.paths.items()})
+        A.paths = {
+            agent: {"path": list(info["path"]), "cost": info["cost"]}
+            for agent, info in N.paths.items()
+        }
         A.sequence = N.sequence
         A.g = N.g
 
@@ -133,7 +136,7 @@ class RobustCbssTuningDelays:
 
         return A
 
-
-# d = {"Rows": 11, "Cols": 11, "Map": [0 for _ in range(11 * 11)]}
-# p = RobustCbssTuningDelays([0, 10], [110, 120], 0.8, {i: 0.3 for i in range(len([0, 10]))}, d, 0.05)
+# print([795, 288, 341, 267, 141, 418, 191, 0, 355, 74]  , [931, 683, 559, 864, 430, 364, 652, 837, 454, 854, 174, 576, 790, 633, 597, 511, 783, 333, 123, 130])
+# d = {"Rows": 32, "Cols": 32, "Map": [0 for _ in range(32 * 32)]}
+# p = RobustCbssTuningDelays([795, 288, 341, 267, 141, 418, 191, 0, 355, 74] , [931, 683, 559, 864, 430, 364, 652, 837, 454, 854, 174, 576, 790, 633, 597, 511, 783, 333, 123, 130], 0.8, {i: 0.1 for i in range(10)}, d, 0.05)
 # print(p.Solution)

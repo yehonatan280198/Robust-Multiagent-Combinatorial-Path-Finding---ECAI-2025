@@ -1,16 +1,22 @@
 import heapq
-
 from RobustCbssTuningDelays.NodeStateClasses import State
 
 
 ########################################################## Extract path #####################################################3
 def extractPath(state):
-    path = []
+    sequence = state.sequence
+    agent_path_and_cost = {"path": [], "cost": 0}
     while state is not None:
-        path.insert(0, state.CurLocation)
+        agent_path_and_cost["path"].insert(0, state.CurLocation)
         state = state.parent
 
-    return path
+    seq_index = 0
+    for time, loc in enumerate(agent_path_and_cost["path"]):
+        if seq_index < len(sequence) and loc == sequence[seq_index]:
+            agent_path_and_cost["cost"] += time
+            seq_index += 1
+
+    return agent_path_and_cost
 
 
 ########################################################## LowLevelPlan Class #####################################################3
@@ -23,17 +29,16 @@ class LowLevelPlan:
         self.dict_cost_for_Heuristic_value = dict_cost_for_Heuristic_value
 
     def runLowLevelPlan(self, Node, agent_that_need_update_path):
-
         for agent in agent_that_need_update_path:
             sequence = Node.sequence["Allocations"][agent]
 
             # If no allocations are present
             if len(sequence) == 1:
-                Node.paths[agent] = [self.AgentLocations[agent]]
+                Node.paths[agent]["path"] = [self.AgentLocations[agent]]
                 continue
 
             # Decrease the previous path cost of the current agent
-            Node.g -= (max(1, len(Node.paths[agent])) - 1)
+            Node.g -= (max(1, Node.paths[agent]["cost"]) - 1)
 
             findPath = False
             OpenList = []
@@ -62,7 +67,7 @@ class LowLevelPlan:
 
             # Extract the path from the final goal back to the start
             Node.paths[agent] = extractPath(S)
-            Node.g += (len(Node.paths[agent]) - 1)
+            Node.g += Node.paths[agent]["cost"]
         return True
 
     ########################################################## calc cost for Heuristic value #####################################################
@@ -70,10 +75,16 @@ class LowLevelPlan:
         if len(S.sequence) == len(sequence):
             return 0
 
-        nextIndex = len(S.sequence)
-        h_val = self.dict_cost_for_Heuristic_value[S.CurLocation, sequence[nextIndex]]
-        return h_val + sum(self.dict_cost_for_Heuristic_value[sequence[i], sequence[i + 1]] for i in
-                           range(nextIndex, len(sequence) - 1))
+        total = 0
+        current_loc = S.CurLocation
+        cumulative = 0
+
+        for i in range(len(S.sequence), len(sequence)):
+            cumulative += self.dict_cost_for_Heuristic_value[current_loc, sequence[i]]
+            total += cumulative
+            current_loc = sequence[i]
+
+        return total
 
     def GetNeighbors(self, state, agent, visited, Node, sequence):
         neighbors = []
@@ -92,12 +103,12 @@ class LowLevelPlan:
                                                                                               :len(state.sequence)]
                 ) else state.sequence
 
-                neighbors.append(State(loc_after_move, state.g + 1, state, afterMoveStateSequence))
+                neighbors.append(State(loc_after_move, state.g + (len(sequence)+len(state.sequence)), state, afterMoveStateSequence))
 
             # Stay in the same place but increment g (cost)
             if canMove == -1 and not stay:
                 stay = True
-                neighbors.append(State(loc, state.g + 1, state, state.sequence[:]))
+                neighbors.append(State(loc, state.g + (len(sequence)+len(state.sequence)), state, state.sequence[:]))
                 del visited[(loc, tuple(state.sequence))]
 
         return neighbors

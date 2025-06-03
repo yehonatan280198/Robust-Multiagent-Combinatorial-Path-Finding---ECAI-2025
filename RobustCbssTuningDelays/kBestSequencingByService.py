@@ -57,15 +57,18 @@ class kBestSequencingByService:
                     if i < self.num_agents:
                         # If coming directly from an agent to a goal
                         self.model += self.t[j] >= self.cost_matrix[i][j] - (1 - self.x[i, j]) * 10000000
+                        self.model += self.t[j] <= self.cost_matrix[i][j] + (1 - self.x[i, j]) * 10000000
                     else:
                         # If coming from a previous goal to the current goal
                         self.model += self.t[j] >= self.t[i] + self.cost_matrix[i][j] - (1 - self.x[i, j]) * 10000000
+                        self.model += self.t[j] <= self.t[i] + self.cost_matrix[i][j] + (1 - self.x[i, j]) * 10000000
 
         self.solver = pulp.CPLEX_CMD(
             path="/home/yonikid/ibm/ILOG/CPLEX_Studio2211/cplex/bin/x86-64_linux/cplex",
             msg=False,
             options=[
-                'set timelimit 1'
+                "set mip tolerances integrality 1e-9",
+                "set timelimit 3",
             ]
         )
 
@@ -78,8 +81,13 @@ class kBestSequencingByService:
         if pulp.LpStatus[self.model.status] == 'Infeasible':
             return {"Allocations": {}, "Cost": math.inf}
 
+        # for (i, j) in self.x:
+        #     val = pulp.value(self.x[i, j])
+        #     if val > 0.0001:
+        #         print(f"x[{i},{j}] = {val}")
+
         current_edges = {(i, j) for (i, j) in self.x if pulp.value(self.x[i, j]) > 0.5}
-        service_times = {j: int(pulp.value(self.t[j])) for j in self.goal_indices}
+        service_times = {j: round(pulp.value(self.t[j])) for j in self.goal_indices}
 
         paths = {}
         for a in range(self.num_agents):
@@ -163,9 +171,9 @@ class kBestSequencingByService:
                 cost_matrix[i, j] = self.cost_dict.get(key, np.inf)
         return cost_matrix
 
-#
-# d = {"Rows": 11, "Cols": 11, "Map": [0 for _ in range(11 * 11)]}
-# p = kBestSequencingByService([0, 10], [110, 120], d)
+
+# d = {"Rows": 10, "Cols": 10, "Map": [0 for _ in range(10 * 10)]}
+# p = kBestSequencingByService([5], [15, 25, 9], d)
 # print(next(p))
 # print(next(p))
 # print(next(p))

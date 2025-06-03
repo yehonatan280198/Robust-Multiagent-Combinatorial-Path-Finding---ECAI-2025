@@ -24,17 +24,17 @@ class Run_Simulation:
 
             for agent, path in self.plan.items():
                 # Current path of the agent
-                lastLoc = path[0]
+                lastLoc = path["path"][0]
 
                 # Simulate agent movement with a delay probability
-                if len(path) != 1 and self.randGen.random() > self.delaysProb[agent]:
+                if len(path["path"]) != 1 and self.randGen.random() > self.delaysProb[agent]:
                     # Remove the first step if the agent moves
-                    path.pop(0)
+                    path["path"].pop(0)
 
-                new_locs.append(path[0])
+                new_locs.append(path["path"][0])
 
                 # Current location of the agent
-                loc = path[0]
+                loc = path["path"][0]
                 # Check for collision
                 if loc in locsAndEdge or (loc, lastLoc) in locsAndEdge:
                     collision = True
@@ -43,7 +43,7 @@ class Run_Simulation:
                 locsAndEdge.add((lastLoc, loc))
 
                 # If the agent has reached its destination, mark it for removal
-                if len(path) == 1:
+                if len(path["path"]) == 1:
                     finish_agents.add(agent)
 
             # Stop the simulation if a collision occurs

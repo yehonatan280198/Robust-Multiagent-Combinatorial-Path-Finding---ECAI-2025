@@ -42,7 +42,7 @@ num_of_agentsList = [10, 15, 20, 25, 30, 40, 50]
 num_of_goalsList = [20, 30, 40, 50, 60, 80, 100]
 no_collision_probList = [0.8, 0.9, 0.95]
 delays_probList = [0.1, 0.3]
-instances = 1
+instances = 10
 verifyAlpha = 0.05
 max_time = 60
 

@@ -4,15 +4,15 @@ from itertools import combinations
 
 def create_loc_times(path):
     locTimes = {}
-    for i, loc in enumerate(path):
+    for i, loc in enumerate(path["path"]):
         locTimes.setdefault(loc, i)
     return locTimes
 
 
 def create_edge_times(path):
     edgeTimes = {}
-    for i in range(len(path) - 1):
-        edge = (path[i], path[i + 1])
+    for i in range(len(path["path"]) - 1):
+        edge = (path["path"][i], path["path"][i + 1])
         edgeTimes.setdefault(edge, i + 1)
     return edgeTimes
 
