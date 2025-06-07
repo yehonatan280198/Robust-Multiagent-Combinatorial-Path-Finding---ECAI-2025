@@ -17,11 +17,57 @@ def create_edge_times(path):
     return edgeTimes
 
 
+def findConflictWithoutDelays(N):
+    for agent1, agent2 in combinations(N.paths.keys(), 2):
+        path1 = N.paths[agent1]
+        path2 = N.paths[agent2]
+
+        # Create loc-time dictionaries
+        locTimes1 = set()
+        for i, loc in enumerate(path1["path"]):
+            locTimes1.add((i, loc))
+
+        locTimes2 = set()
+        for i, loc in enumerate(path2["path"]):
+            locTimes2.add((i, loc))
+
+        # Detect location conflicts
+        common_locs = locTimes1 & locTimes2
+        if len(common_locs) != 0:
+            time, loc = min(common_locs)
+            return 0, time, None, loc, (agent1, time), (agent2, time)
+
+        edgeTimes1 = set()
+        for i in range(len(path1["path"]) - 1):
+            if path1["path"][i] != path1["path"][i + 1]:
+                edge = (path1["path"][i], path1["path"][i + 1])
+                edgeTimes1.add((i + 1, edge))
+
+        edgeTimes2 = set()
+        for i in range(len(path2["path"]) - 1):
+            if path2["path"][i] != path2["path"][i + 1]:
+                edge = (path2["path"][i], path2["path"][i + 1])
+                edgeTimes2.add((i + 1, edge))
+
+        # Detect edge conflicts, including reversed edges
+        for time, edge1 in edgeTimes1:
+            reversed_edge1 = (edge1[1], edge1[0])
+            if (time, reversed_edge1) in edgeTimes2:
+                return 0, time, None, frozenset(edge1), (agent1, time), (agent2, time)
+
+    return None
+
+
 class FindConflict:
-    def __init__(self):
+    def __init__(self, delayRatio):
         self.randGen = random.Random(42)
+        self.delayRatio = delayRatio
 
     def findConflict(self, N):
+
+        if self.delayRatio == 0:
+            return findConflictWithoutDelays(N)
+
         heap = []
 
         posConstraintsDict = {

@@ -4,18 +4,10 @@ from RobustCbssTuningDelays.NodeStateClasses import State
 
 ########################################################## Extract path #####################################################3
 def extractPath(state):
-    sequence = state.sequence
-    agent_path_and_cost = {"path": [], "cost": 0}
+    agent_path_and_cost = {"path": [], "cost": state.g}
     while state is not None:
         agent_path_and_cost["path"].insert(0, state.CurLocation)
         state = state.parent
-
-    seq_index = 0
-    for time, loc in enumerate(agent_path_and_cost["path"]):
-        if seq_index < len(sequence) and loc == sequence[seq_index]:
-            agent_path_and_cost["cost"] += time
-            seq_index += 1
-
     return agent_path_and_cost
 
 
@@ -67,7 +59,7 @@ class LowLevelPlan:
 
             # Extract the path from the final goal back to the start
             Node.paths[agent] = extractPath(S)
-            Node.g += Node.paths[agent]["cost"]
+            Node.g += S.g
         return True
 
     ########################################################## calc cost for Heuristic value #####################################################
@@ -84,7 +76,7 @@ class LowLevelPlan:
             total += cumulative
             current_loc = sequence[i]
 
-        return total
+        return cumulative
 
     def GetNeighbors(self, state, agent, visited, Node, sequence):
         neighbors = []
@@ -103,12 +95,12 @@ class LowLevelPlan:
                                                                                               :len(state.sequence)]
                 ) else state.sequence
 
-                neighbors.append(State(loc_after_move, state.g + (len(sequence)+len(state.sequence)), state, afterMoveStateSequence))
+                neighbors.append(State(loc_after_move, state.g + (len(sequence) - len(state.sequence)), state, afterMoveStateSequence))
 
             # Stay in the same place but increment g (cost)
             if canMove == -1 and not stay:
                 stay = True
-                neighbors.append(State(loc, state.g + (len(sequence)+len(state.sequence)), state, state.sequence[:]))
+                neighbors.append(State(loc, state.g + (len(sequence) - len(state.sequence)), state, state.sequence[:]))
                 del visited[(loc, tuple(state.sequence))]
 
         return neighbors

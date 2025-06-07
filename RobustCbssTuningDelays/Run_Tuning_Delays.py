@@ -10,9 +10,9 @@ from RobustCbssTuningDelays.kBestSequencingByService import kBestSequencingBySer
 
 
 class RobustCbssTuningDelays:
-    def __init__(self, AgentLocations, GoalLocations, no_collision_prob, delaysProb, MapAndDims, verifyAlpha):
+    def __init__(self, AgentLocations, GoalLocations, no_collision_prob, delaysProb, MapAndDims, verifyAlpha, delayRatio):
         self.AgentLocations = AgentLocations  # Locations of Agents
-        self.GoalLocations = GoalLocations  # Locations of goals
+        self.delayRatio = delayRatio
 
         self.ResolvedConflicts = 0
 
@@ -20,10 +20,10 @@ class RobustCbssTuningDelays:
         self.Num_roots_generated = 0  # Counter for the number of root nodes generated
         self.K_optimal_sequences = {}  # Dictionary to store k-optimal sequences of allocations
 
-        self.K_Best_Seq_Solver = kBestSequencingByService(self.AgentLocations, self.GoalLocations, MapAndDims)
+        self.K_Best_Seq_Solver = kBestSequencingByService(self.AgentLocations, GoalLocations, MapAndDims)
         self.LowLevelPlanner = LowLevelPlan(MapAndDims, self.AgentLocations, self.K_Best_Seq_Solver.cost_dict)
-        self.verify_algorithm = Verify(delaysProb, no_collision_prob, verifyAlpha)
-        self.findConflict_algorithm = FindConflict()
+        self.verify_algorithm = Verify(delaysProb, no_collision_prob, verifyAlpha, delayRatio)
+        self.findConflict_algorithm = FindConflict(delayRatio)
 
         self.Solution = self.run()
 
@@ -54,13 +54,14 @@ class RobustCbssTuningDelays:
             N = self.CheckNewRoot(N)
             if N is None:
                 continue
+            print(N.negConstraints)
 
             # If the paths in the current node are verified as valid, avoiding collisions with probability P, return them as the solution
             if (not N.isPositiveNode) and self.verify_algorithm.verify(N.paths):
                 return [N.paths, self.Num_roots_generated, self.ResolvedConflicts]
-
             # Identify the first conflict in the paths
             conflict = self.findConflict_algorithm.findConflict(N)
+            print(conflict)
             if conflict is None:
                 continue
             else:
@@ -78,8 +79,9 @@ class RobustCbssTuningDelays:
                 if A2 is not None:
                     self.OPEN.put((A2.g, A2))
 
-            A3 = self.GenChild(N, (agent1AndTime[0], agent2AndTime[0], x, agent1AndTime[1], agent2AndTime[1]))
-            self.OPEN.put((A3.g, A3))
+            if self.delayRatio != 0:
+                A3 = self.GenChild(N, (agent1AndTime[0], agent2AndTime[0], x, agent1AndTime[1], agent2AndTime[1]))
+                self.OPEN.put((A3.g, A3))
 
     ####################################################### Check new root ############################################################
 

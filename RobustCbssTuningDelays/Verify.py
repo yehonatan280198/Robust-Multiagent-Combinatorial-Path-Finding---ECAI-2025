@@ -4,15 +4,62 @@ from itertools import combinations
 
 from scipy.stats import norm
 
+
+def verifyWithoutDelay(paths):
+    for agent1, agent2 in combinations(paths.keys(), 2):
+        path1 = paths[agent1]
+        path2 = paths[agent2]
+
+        # Create loc-time dictionaries
+        locTimes1 = set()
+        for i, loc in enumerate(path1["path"]):
+            locTimes1.add((i, loc))
+
+        locTimes2 = set()
+        for i, loc in enumerate(path2["path"]):
+            locTimes2.add((i, loc))
+
+        # Detect location conflicts
+        common_locs = locTimes1 & locTimes2
+        if len(common_locs) != 0:
+            return False
+
+        # Create edge-time dictionaries
+        edgeTimes1 = set()
+        for i in range(len(path1["path"]) - 1):
+            if path1["path"][i] != path1["path"][i + 1]:
+                edge = (path1["path"][i], path1["path"][i + 1])
+                edgeTimes1.add((i + 1, edge))
+
+        edgeTimes2 = set()
+        for i in range(len(path2["path"]) - 1):
+            if path2["path"][i] != path2["path"][i + 1]:
+                edge = (path2["path"][i], path2["path"][i + 1])
+                edgeTimes2.add((i + 1, edge))
+
+        # Detect edge conflicts, including reversed edges
+        for time1, edge1 in edgeTimes1:
+            reversed_edge1 = (edge1[1], edge1[0])
+            if (time1, reversed_edge1) in edgeTimes2:
+                return False
+
+    return True
+
+
 class Verify:
 
-    def __init__(self, delaysProb, no_collision_prob, verifyAlpha):
+    def __init__(self, delaysProb, no_collision_prob, verifyAlpha, delayRatio):
         self.delaysProb = delaysProb
         self.no_collision_prob = no_collision_prob
         self.verifyAlpha = verifyAlpha
         self.randGen = random.Random(47)
+        self.delayRatio = delayRatio
 
     def verify(self, paths):
+
+        if self.delayRatio == 0:
+            return verifyWithoutDelay(paths)
+
         # Calculate initial simulations size (s0) based on the desired confidence level
         z1SubAlphaSquare = (norm.ppf(1 - self.verifyAlpha)) ** 2
         s0 = max(30, math.ceil(z1SubAlphaSquare * (self.no_collision_prob / (1 - self.no_collision_prob))))
@@ -100,3 +147,4 @@ class Verify:
 
         # Return the number of successful simulations
         return count_success
+

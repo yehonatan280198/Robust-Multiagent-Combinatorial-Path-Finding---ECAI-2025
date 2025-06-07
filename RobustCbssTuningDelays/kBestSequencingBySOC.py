@@ -5,7 +5,7 @@ from collections import deque
 import pulp
 
 
-class kBestSequencingByService:
+class kBestSequencingBySOC:
 
     def __init__(self, AgentLocations, GoalLocations, dict_of_map_and_dim):
         self.num_agents = len(AgentLocations)
@@ -19,23 +19,26 @@ class kBestSequencingByService:
         self.cost_matrix = self.build_cost_matrix()
 
         # Create the MILP model with a minimization objective
-        self.model = pulp.LpProblem("MinimizeTotalServiceTime", pulp.LpMinimize)
+        self.model = pulp.LpProblem("MinimizeSOC", pulp.LpMinimize)
 
         # Binary variables x[i,j]: whether there is a path from node i to node j
         self.x = pulp.LpVariable.dicts(
             "x",
             ((i, j) for i in range(self.total_nodes) for j in self.goal_indices if i != j),
-            cat="Binary")
+            cat="Binary"
+        )
 
-        # Integer variables t[j]: service time at goal j
-        self.t = pulp.LpVariable.dicts(
-            "t",
-            (j for j in self.goal_indices),
+        # Subtour elimination variables (MTZ formulation)
+        self.u = pulp.LpVariable.dicts(
+            "u",
+            range(self.total_nodes),
             lowBound=0,
-            cat="Integer")
+            upBound=self.total_nodes,
+            cat='Continuous'
+        )
 
-        # Objective: minimize the total service time across all goals
-        self.model += pulp.lpSum([self.t[j] for j in self.goal_indices])
+        # Objective: minimize the total cost of transitions
+        self.model += pulp.lpSum([self.cost_matrix[i][j] * self.x[i, j] for (i, j) in self.x])
 
         # Constraints
         for j in self.goal_indices:
@@ -50,27 +53,16 @@ class kBestSequencingByService:
         for a in range(self.num_agents):
             self.model += pulp.lpSum([self.x[a, j] for j in self.goal_indices]) <= 1
 
-        # Constraint 4: timing constraints based on transitions
-        for i in range(self.total_nodes):
-            for j in self.goal_indices:
-                if i != j:
-                    if i < self.num_agents:
-                        # If coming directly from an agent to a goal
-                        self.model += self.t[j] >= self.cost_matrix[i][j] - (1 - self.x[i, j]) * 10000000
-                        self.model += self.t[j] <= self.cost_matrix[i][j] + (1 - self.x[i, j]) * 10000000
-                    else:
-                        # If coming from a previous goal to the current goal
-                        self.model += self.t[j] >= self.t[i] + self.cost_matrix[i][j] - (1 - self.x[i, j]) * 10000000
-                        self.model += self.t[j] <= self.t[i] + self.cost_matrix[i][j] + (1 - self.x[i, j]) * 10000000
+        for (i, j) in self.x:
+            self.model += self.u[i] - self.u[j] + self.total_nodes * self.x[i, j] <= self.total_nodes - 1
 
         self.solver = pulp.CPLEX_CMD(
             path="/home/yonikid/ibm/ILOG/CPLEX_Studio2211/cplex/bin/x86-64_linux/cplex",
             msg=False,
             options=[
-                "set randomseed 42",
-                "set mip strategy heuristicfreq 1",
                 "set mip tolerances integrality 1e-9",
-                "set timelimit 5",
+                "set randomseed 42",
+                "set timelimit 3"
             ]
         )
 
@@ -84,7 +76,6 @@ class kBestSequencingByService:
             return {"Allocations": {}, "Cost": math.inf}
 
         current_edges = {(i, j) for (i, j) in self.x if pulp.value(self.x[i, j]) > 0.5}
-        service_times = {j: round(pulp.value(self.t[j])) for j in self.goal_indices}
 
         paths = {}
         for a in range(self.num_agents):
@@ -98,10 +89,12 @@ class kBestSequencingByService:
                 current = next_node
             paths[a] = curr_path
 
+        SOC = sum(int(self.cost_matrix[i][j]) for (i, j) in current_edges)
+
         # Add exclusion constraint to prevent repeating this edge set
         self.model += pulp.lpSum([self.x[i, j] for (i, j) in current_edges]) <= len(current_edges) - 1
 
-        return {"Allocations": paths, "Cost": sum(service_times.values())}
+        return {"Allocations": paths, "Cost": SOC}
 
     def precompute_costs(self, GoalLocations):
         precomputed_cost = defaultdict(lambda: 1000000)
@@ -169,12 +162,5 @@ class kBestSequencingByService:
         return cost_matrix
 
 
-# d = {"Rows": 10, "Cols": 10, "Map": [0 for _ in range(10 * 10)]}
-# p = kBestSequencingByService([5], [15, 25, 9], d)
-# print(next(p))
-# print(next(p))
-# print(next(p))
-# print(next(p))
-# print(next(p))
-# print(next(p))
-# print(next(p))
+# d = {"Rows": 12, "Cols": 12, "Map": [0 for _ in range(12 * 12)]}
+# p = kBestSequencingBySOC([5,75,55], [29,53,77], d)
