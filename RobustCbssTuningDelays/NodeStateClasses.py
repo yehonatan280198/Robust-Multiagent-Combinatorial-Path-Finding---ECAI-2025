@@ -20,7 +20,7 @@ class Node:
 
 @total_ordering
 class State:
-    def __init__(self, CurLocation, g=0, parent=None, sequence=[]):
+    def __init__(self, CurLocation, g=0, parent=None, sequence=[], t=0):
         # The current location (position and direction) of the agent
         self.CurLocation = CurLocation
         # Cost to reach this state from the initial state
@@ -28,6 +28,7 @@ class State:
         # Parent state for path reconstruction
         self.parent = parent
         self.sequence = sequence
+        self.t = t
 
     # Define equality based on current location and cost
     def __eq__(self, other):

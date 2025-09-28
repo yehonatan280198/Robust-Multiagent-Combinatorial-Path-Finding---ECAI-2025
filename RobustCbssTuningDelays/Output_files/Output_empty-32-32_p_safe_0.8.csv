@@ -1,3 +1,0 @@
-Map,Safe prob,Delay prob,Delay ratio,Number of agents,Number of goals,Instance,Runtime,Offline runtime,Online runtime,Planner calls,Sum Of Cost,Number Of Conflicts (Offline)
-empty-32-32,0.8,0.25,0,15,30,1,15.79587,15.78736,4e-05,2,353,2
-empty-32-32,0.8,0.25,0.2,15,30,1,,,,,,

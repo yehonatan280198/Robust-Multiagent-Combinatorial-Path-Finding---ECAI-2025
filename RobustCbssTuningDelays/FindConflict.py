@@ -2,6 +2,7 @@ import heapq
 import random
 from itertools import combinations
 
+
 def create_loc_times(path):
     locTimes = {}
     for i, loc in enumerate(path["path"]):
@@ -59,13 +60,19 @@ def findConflictWithoutDelays(N):
 
 
 class FindConflict:
-    def __init__(self, delayRatio):
+    def __init__(self, delaysProb):
         self.randGen = random.Random(42)
-        self.delayRatio = delayRatio
+        self.delaysProb = delaysProb
+        self.cacheConflict = None
 
     def findConflict(self, N):
 
-        if self.delayRatio == 0:
+        if self.cacheConflict is not None:
+            returnConflict = self.cacheConflict
+            self.cacheConflict = None
+            return returnConflict
+
+        if self.delaysProb[0] == 0:
             return findConflictWithoutDelays(N)
 
         heap = []
@@ -117,3 +124,24 @@ class FindConflict:
                             (agent2, agent2_time)))
 
         return heapq.heappop(heap) if heap else None
+
+    def Check_Potential_Conflict_in_first_step(self, N):
+        potential_locs = []
+
+        for currAgent, path in N.paths.items():
+            currLoc = path["path"][0]
+            for agent, loc, time in potential_locs:
+                if currLoc == loc and currAgent != agent:
+                    self.cacheConflict = (None, None, None, loc, (currAgent, 0), (agent, time))
+                    return False
+            potential_locs.append((currAgent, currLoc, 0))
+
+            if len(path["path"]) > 1:
+                nextLoc = path["path"][1]
+                for agent, loc, time in potential_locs:
+                    if nextLoc == loc and currAgent != agent:
+                        self.cacheConflict = (None, None, None, loc, (currAgent, 1), (agent, time))
+                        return False
+                potential_locs.append((currAgent, nextLoc, 1))
+
+        return True

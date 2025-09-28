@@ -32,13 +32,13 @@ def read_map_file(file_path):
     return {"Rows": rows, "Cols": cols, "Map": currMap}
 
 
-mapsList = ["empty-32-32.map", "random-32-32-20.map", "maze-32-32-2.map", "room-32-32-4.map", "den312d.map", "ht_chantry.map", "lak303d.map", "den520d.map"]
+mapsList = ["random-32-32-20.map", "maze-32-32-2.map", "room-32-32-4.map", "warehouse-10-20-10-2-1.map"]
 output_dir = "Agent_Goal_locations_files"
 os.makedirs(output_dir, exist_ok=True)
 
 for map_name in mapsList:
     mapAndDim = read_map_file(map_name)
-    for instance in range(100):
+    for instance in range(300):
         AgentsPositions, GoalsLocations = create_locations_for_agents_And_Goals(70, 130, mapAndDim)
 
         agents_file = os.path.join(output_dir,

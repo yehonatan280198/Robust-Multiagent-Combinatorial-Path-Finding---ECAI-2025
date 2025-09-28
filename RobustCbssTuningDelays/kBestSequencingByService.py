@@ -1,114 +1,102 @@
 import math
-from collections import defaultdict
+from collections import defaultdict, deque
 import numpy as np
-from collections import deque
-import pulp
+import gurobipy as gp
+from gurobipy import GRB
 
 
 class kBestSequencingByService:
 
-    def __init__(self, AgentLocations, GoalLocations, dict_of_map_and_dim):
-        self.num_agents = len(AgentLocations)
-        self.num_goals = len(GoalLocations)
-        self.total_nodes = self.num_agents + self.num_goals
-        self.all_nodes = AgentLocations + GoalLocations
-        self.goal_indices = list(range(self.num_agents, self.total_nodes))
+    def __init__(self, AgentLocations, GoalLocations, dict_of_map_and_dim, gurobiModel):
+        self.num_agents, self.num_goals = len(AgentLocations), len(GoalLocations)
+        self.nodes_dict = {"All": AgentLocations + GoalLocations, "Total": self.num_agents + self.num_goals}
+        self.goal_indices = list(range(self.num_agents, self.nodes_dict["Total"]))
+
         self.MapAndDims = dict_of_map_and_dim
 
         self.cost_dict = self.precompute_costs(GoalLocations)
-        self.cost_matrix = self.build_cost_matrix()
 
         # Create the MILP model with a minimization objective
-        self.model = pulp.LpProblem("MinimizeTotalServiceTime", pulp.LpMinimize)
+        self.model = gurobiModel
 
         # Binary variables x[i,j]: whether there is a path from node i to node j
-        self.x = pulp.LpVariable.dicts(
-            "x",
-            ((i, j) for i in range(self.total_nodes) for j in self.goal_indices if i != j),
-            cat="Binary")
+        self.x = self.model.addVars(
+            [(i, j) for i in range(self.nodes_dict["Total"]) for j in self.goal_indices if i != j],
+            vtype=GRB.BINARY,
+            name="x"
+        )
 
         # Integer variables t[j]: service time at goal j
-        self.t = pulp.LpVariable.dicts(
-            "t",
-            (j for j in self.goal_indices),
-            lowBound=0,
-            cat="Integer")
+        self.t = self.model.addVars(
+            self.goal_indices,
+            vtype=GRB.INTEGER,
+            lb=0,
+            name="t"
+        )
 
         # Objective: minimize the total service time across all goals
-        self.model += pulp.lpSum([self.t[j] for j in self.goal_indices])
+        self.model.setObjective(gp.quicksum(self.t[j] for j in self.goal_indices), GRB.MINIMIZE)
 
         # Constraints
         for j in self.goal_indices:
 
             # Constraint 1: each goal must have exactly one incoming edge (visited once)
-            self.model += pulp.lpSum([self.x[i, j] for i in range(self.total_nodes) if i != j]) == 1
+            self.model.addConstr(gp.quicksum(self.x[i, j] for i in range(self.nodes_dict["Total"]) if i != j) == 1)
 
             # Constraint 2: each goal can lead to at most one other goal
-            self.model += pulp.lpSum([self.x[j, k] for k in self.goal_indices if k != j]) <= 1
+            self.model.addConstr(gp.quicksum(self.x[j, k] for k in self.goal_indices if k != j) <= 1)
 
         # Constraint 3: each agent starts at most one path
         for a in range(self.num_agents):
-            self.model += pulp.lpSum([self.x[a, j] for j in self.goal_indices]) <= 1
+            self.model.addConstr(gp.quicksum(self.x[a, j] for j in self.goal_indices) <= 1)
 
         # Constraint 4: timing constraints based on transitions
-        for i in range(self.total_nodes):
+        M = 1000000
+        for i in range(self.nodes_dict["Total"]):
             for j in self.goal_indices:
                 if i != j:
+                    cost = self.cost_dict.get((self.nodes_dict["All"][i], self.nodes_dict["All"][j]))
                     if i < self.num_agents:
                         # If coming directly from an agent to a goal
-                        self.model += self.t[j] >= self.cost_matrix[i][j] - (1 - self.x[i, j]) * 10000000
-                        self.model += self.t[j] <= self.cost_matrix[i][j] + (1 - self.x[i, j]) * 10000000
+                        self.model.addConstr(self.t[j] >= cost - (1 - self.x[i, j]) * M)
+                        self.model.addConstr(self.t[j] <= cost + (1 - self.x[i, j]) * M)
                     else:
                         # If coming from a previous goal to the current goal
-                        self.model += self.t[j] >= self.t[i] + self.cost_matrix[i][j] - (1 - self.x[i, j]) * 10000000
-                        self.model += self.t[j] <= self.t[i] + self.cost_matrix[i][j] + (1 - self.x[i, j]) * 10000000
-
-        self.solver = pulp.CPLEX_CMD(
-            path="/home/yonikid/ibm/ILOG/CPLEX_Studio2211/cplex/bin/x86-64_linux/cplex",
-            msg=False,
-            options=[
-                "set randomseed 42",
-                "set mip strategy heuristicfreq 1",
-                "set mip tolerances integrality 1e-9",
-                "set timelimit 5",
-            ]
-        )
+                        self.model.addConstr(self.t[j] >= self.t[i] + cost - (1 - self.x[i, j]) * M)
+                        self.model.addConstr(self.t[j] <= self.t[i] + cost + (1 - self.x[i, j]) * M)
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        self.model.solve(self.solver)
+        self.model.optimize()
 
-        if pulp.LpStatus[self.model.status] == 'Infeasible':
+        if self.model.status == GRB.INFEASIBLE or (self.model.status == GRB.TIME_LIMIT and self.model.SolCount == 0):
             return {"Allocations": {}, "Cost": math.inf}
 
-        current_edges = {(i, j) for (i, j) in self.x if pulp.value(self.x[i, j]) > 0.5}
-        service_times = {j: round(pulp.value(self.t[j])) for j in self.goal_indices}
+        current_edges = {(i, j) for (i, j) in self.x if self.x[i, j].X > 0.5}
+        service_times = {j: round(self.t[j].X) for j in self.goal_indices}
 
         paths = {}
         for a in range(self.num_agents):
-            curr_path = [self.all_nodes[a]]
+            curr_path = [self.nodes_dict["All"][a]]
             current = a
             while True:
                 next_node = next((j for (i, j) in current_edges if i == current), None)
                 if next_node is None:
                     break
-                curr_path.append(self.all_nodes[next_node])
+                curr_path.append(self.nodes_dict["All"][next_node])
                 current = next_node
             paths[a] = curr_path
 
         # Add exclusion constraint to prevent repeating this edge set
-        self.model += pulp.lpSum([self.x[i, j] for (i, j) in current_edges]) <= len(current_edges) - 1
-
+        self.model.addConstr(gp.quicksum(self.x[i, j] for (i, j) in current_edges) <= len(current_edges) - 1)
         return {"Allocations": paths, "Cost": sum(service_times.values())}
 
     def precompute_costs(self, GoalLocations):
         precomputed_cost = defaultdict(lambda: 1000000)
-
         for goal in GoalLocations:
             self.BFS(goal, precomputed_cost)
-
         return precomputed_cost
 
     def BFS(self, goal, precomputed_cost):
@@ -130,12 +118,10 @@ class kBestSequencingByService:
 
     def get_neighbors(self, current_loc, cost):
         neighbors = []
-
-        for neighborLoc in [current_loc + 1, current_loc + self.MapAndDims["Cols"], current_loc - 1,
-                            current_loc - self.MapAndDims["Cols"]]:
+        for neighborLoc in [current_loc + 1, current_loc + self.MapAndDims["Cols"],
+                            current_loc - 1, current_loc - self.MapAndDims["Cols"]]:
             if self.validate_move(neighborLoc, current_loc):
                 neighbors.append((neighborLoc, cost + 1))
-
         return neighbors
 
     def validate_move(self, loc_after_move, loc):
@@ -159,22 +145,3 @@ class kBestSequencingByService:
             return False
 
         return True
-
-    def build_cost_matrix(self):
-        cost_matrix = np.full((self.total_nodes, self.total_nodes), np.inf)
-        for i, agent in enumerate(self.all_nodes):
-            for j, goal in enumerate(self.all_nodes):
-                key = (agent, goal)
-                cost_matrix[i, j] = self.cost_dict.get(key, np.inf)
-        return cost_matrix
-
-
-# d = {"Rows": 10, "Cols": 10, "Map": [0 for _ in range(10 * 10)]}
-# p = kBestSequencingByService([5], [15, 25, 9], d)
-# print(next(p))
-# print(next(p))
-# print(next(p))
-# print(next(p))
-# print(next(p))
-# print(next(p))
-# print(next(p))

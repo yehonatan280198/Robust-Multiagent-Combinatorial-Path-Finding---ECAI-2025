@@ -1,37 +1,42 @@
+import math
+import time
 from collections import defaultdict
 from queue import PriorityQueue
-import math
+from multiprocessing import Process, Queue
 
-from RobustCbssTuningDelays.FindConflict import FindConflict
-from RobustCbssTuningDelays.LowLevelPlan import LowLevelPlan
-from RobustCbssTuningDelays.NodeStateClasses import Node
-from RobustCbssTuningDelays.Verify import Verify
-from RobustCbssTuningDelays.kBestSequencingByService import kBestSequencingByService
+from FindConflict import FindConflict
+from LowLevelPlan import LowLevelPlan
+from NodeStateClasses import Node
+from Verify import Verify
+from kBestSequencingByService import kBestSequencingByService
 
 
-class RobustCbssTuningDelays:
-    def __init__(self, AgentLocations, GoalLocations, no_collision_prob, delaysProb, MapAndDims, verifyAlpha, delayRatio):
-        self.AgentLocations = AgentLocations  # Locations of Agents
-        self.delayRatio = delayRatio
+class RobustPlanner:
+    def __init__(self, AgentLocations, GoalLocations, desired_safe_prob, delaysProb, MapAndDims, verifyAlpha, gurobiModel, process_queue, typeOfVerify):
+        self.AgentLocations = AgentLocations
+        self.desired_safe_prob = desired_safe_prob
+        self.OPEN = PriorityQueue()
+        self.Num_roots_generated = 0
+        self.K_optimal_sequences = {}
+        self.final_sol = None
+        self.process_queue = process_queue
+        self.delaysProb = delaysProb
 
-        self.ResolvedConflicts = 0
-
-        self.OPEN = PriorityQueue()  # Open list for CBS nodes, prioritized by cost
-        self.Num_roots_generated = 0  # Counter for the number of root nodes generated
-        self.K_optimal_sequences = {}  # Dictionary to store k-optimal sequences of allocations
-
-        self.K_Best_Seq_Solver = kBestSequencingByService(self.AgentLocations, GoalLocations, MapAndDims)
+        self.K_Best_Seq_Solver = kBestSequencingByService(self.AgentLocations, GoalLocations, MapAndDims, gurobiModel)
         self.LowLevelPlanner = LowLevelPlan(MapAndDims, self.AgentLocations, self.K_Best_Seq_Solver.cost_dict)
-        self.verify_algorithm = Verify(delaysProb, no_collision_prob, verifyAlpha, delayRatio)
-        self.findConflict_algorithm = FindConflict(delayRatio)
-
-        self.Solution = self.run()
+        self.findConflict_algorithm = FindConflict(delaysProb)
+        self.verify_algorithm = Verify(delaysProb, desired_safe_prob, verifyAlpha, self.process_queue, self.findConflict_algorithm, typeOfVerify)
 
     ####################################################### run ############################################################
 
     def run(self):
+        print("New Plan", flush=True)
         # Calculate the best sequence of task allocations (k=1)
         self.K_optimal_sequences[1] = next(self.K_Best_Seq_Solver)
+        if self.K_optimal_sequences[1]['Cost'] == math.inf:
+            print(f"Allocation not found", flush=True)
+            time.sleep(60)
+
         # Increment root node counter
         self.Num_roots_generated += 1
 
@@ -54,18 +59,19 @@ class RobustCbssTuningDelays:
             N = self.CheckNewRoot(N)
             if N is None:
                 continue
-            print(N.negConstraints)
 
             # If the paths in the current node are verified as valid, avoiding collisions with probability P, return them as the solution
-            if (not N.isPositiveNode) and self.verify_algorithm.verify(N.paths):
-                return [N.paths, self.Num_roots_generated, self.ResolvedConflicts]
+            if not N.isPositiveNode and self.verify_algorithm.verify(N):
+                if self.desired_safe_prob == "NotAvailable":
+                    self.process_queue.put([dict(N.paths), N.g, self.desired_safe_prob])
+                return
+
             # Identify the first conflict in the paths
             conflict = self.findConflict_algorithm.findConflict(N)
-            print(conflict)
+
             if conflict is None:
                 continue
             else:
-                self.ResolvedConflicts += 1
                 _, _, _, x, agent1AndTime, agent2AndTime = conflict
 
             # Generate child nodes with constraints to resolve the conflict and add child nodes to the open list
@@ -79,15 +85,14 @@ class RobustCbssTuningDelays:
                 if A2 is not None:
                     self.OPEN.put((A2.g, A2))
 
-            if self.delayRatio != 0:
+            if self.delaysProb[0] != 0 and max(agent1AndTime[1], agent2AndTime[1]) != 1:
                 A3 = self.GenChild(N, (agent1AndTime[0], agent2AndTime[0], x, agent1AndTime[1], agent2AndTime[1]))
                 self.OPEN.put((A3.g, A3))
 
+        return None
     ####################################################### Check new root ############################################################
 
     def CheckNewRoot(self, N):
-        print(f"{N.g}, {self.K_optimal_sequences[self.Num_roots_generated]['Cost']}")
-
         # If the current node cost is within the threshold of the current optimal sequence
         if N.g <= self.K_optimal_sequences[self.Num_roots_generated]["Cost"]:
             return N
@@ -138,7 +143,28 @@ class RobustCbssTuningDelays:
 
         return A
 
-# print([795, 288, 341, 267, 141, 418, 191, 0, 355, 74]  , [931, 683, 559, 864, 430, 364, 652, 837, 454, 854, 174, 576, 790, 633, 597, 511, 783, 333, 123, 130])
-# d = {"Rows": 32, "Cols": 32, "Map": [0 for _ in range(32 * 32)]}
-# p = RobustCbssTuningDelays([795, 288, 341, 267, 141, 418, 191, 0, 355, 74] , [931, 683, 559, 864, 430, 364, 652, 837, 454, 854, 174, 576, 790, 633, 597, 511, 783, 333, 123, 130], 0.8, {i: 0.1 for i in range(10)}, d, 0.05)
-# print(p.Solution)
+def planner_process(AgentLocations, GoalLocations, safe_prob, DelaysProbDict, mapAndDim, verifyAlpha, gurobiModel, queue, typeOfVerify):
+    cbss = RobustPlanner(AgentLocations, GoalLocations, safe_prob, DelaysProbDict, mapAndDim, verifyAlpha, gurobiModel, queue, typeOfVerify)
+    cbss.run()
+
+def run_robust_planner_with_timeout(AgentLocations, GoalLocations, safe_prob, DelaysProbDict, mapAndDim,
+                                    verifyAlpha, gurobiModel, max_planning_time, typeOfVerify):
+    queue = Queue()
+    process = Process(
+        target=planner_process,
+        args=(AgentLocations, GoalLocations, safe_prob, DelaysProbDict, mapAndDim, verifyAlpha, gurobiModel, queue, typeOfVerify)
+    )
+    start_time = time.time()
+    process.start()
+    process.join(timeout=max_planning_time)
+    plan_time = time.time() - start_time
+
+    if process.is_alive():
+        print("Planning Timeout reached.")
+        process.terminate()
+        process.join()
+
+    last_result = None
+    while not queue.empty():
+        last_result = queue.get_nowait()
+    return last_result, min(60, plan_time)

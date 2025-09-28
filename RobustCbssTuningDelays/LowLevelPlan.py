@@ -1,5 +1,5 @@
 import heapq
-from RobustCbssTuningDelays.NodeStateClasses import State
+from NodeStateClasses import State
 
 
 ########################################################## Extract path #####################################################3
@@ -30,28 +30,28 @@ class LowLevelPlan:
                 continue
 
             # Decrease the previous path cost of the current agent
-            Node.g -= (max(1, Node.paths[agent]["cost"]) - 1)
+            Node.g -= Node.paths[agent]["cost"]
 
             findPath = False
             OpenList = []
             visited = {}
 
-            S = State(self.AgentLocations[agent], sequence=[self.AgentLocations[agent]])
+            S = State(self.AgentLocations[agent], sequence=[self.AgentLocations[agent]], t=0)
             heapq.heappush(OpenList, (self.calc_cost_for_Heuristic_value(S, sequence), S))
 
             while OpenList:
                 _, S = heapq.heappop(OpenList)
 
-                if (S.CurLocation, tuple(S.sequence)) in visited:
+                if (S.CurLocation, tuple(S.sequence), S.t) in visited:
                     continue
-                visited[(S.CurLocation, tuple(S.sequence))] = True
+                visited[(S.CurLocation, tuple(S.sequence), S.t)] = True
 
                 if len(S.sequence) == len(sequence):
                     findPath = True
                     break
 
                 for Sl in self.GetNeighbors(S, agent, visited, Node, sequence):
-                    if not visited.get((Sl.CurLocation, tuple(Sl.sequence)), False):
+                    if not visited.get((Sl.CurLocation, tuple(Sl.sequence), Sl.t), False):
                         heapq.heappush(OpenList, (self.calc_cost_for_Heuristic_value(Sl, sequence) + Sl.g, Sl))
 
             if not findPath:
@@ -67,16 +67,16 @@ class LowLevelPlan:
         if len(S.sequence) == len(sequence):
             return 0
 
-        total = 0
+        steps = 0
         current_loc = S.CurLocation
-        cumulative = 0
+        total_service_time = 0
 
         for i in range(len(S.sequence), len(sequence)):
-            cumulative += self.dict_cost_for_Heuristic_value[current_loc, sequence[i]]
-            total += cumulative
+            steps += self.dict_cost_for_Heuristic_value[(current_loc, sequence[i])]
+            total_service_time += steps
             current_loc = sequence[i]
 
-        return cumulative
+        return total_service_time
 
     def GetNeighbors(self, state, agent, visited, Node, sequence):
         neighbors = []
@@ -90,18 +90,18 @@ class LowLevelPlan:
             canMove = self.validateMove(loc_after_move, agent, state, Node)
 
             if canMove == 1:
-                afterMoveStateSequence = state.sequence + [sequence[len(state.sequence)]] if (
-                        loc_after_move == sequence[len(state.sequence)] and state.sequence == sequence[
-                                                                                              :len(state.sequence)]
-                ) else state.sequence
+                if loc_after_move == sequence[len(state.sequence)] and state.sequence == sequence[:len(state.sequence)]:
+                    afterMoveStateSequence = state.sequence + [sequence[len(state.sequence)]]
+                else:
+                    afterMoveStateSequence = state.sequence[:]
 
-                neighbors.append(State(loc_after_move, state.g + (len(sequence) - len(state.sequence)), state, afterMoveStateSequence))
+                neighbors.append(State(loc_after_move, state.g + (len(sequence) - len(state.sequence)), state, afterMoveStateSequence, state.t+1))
 
             # Stay in the same place but increment g (cost)
             if canMove == -1 and not stay:
                 stay = True
-                neighbors.append(State(loc, state.g + (len(sequence) - len(state.sequence)), state, state.sequence[:]))
-                del visited[(loc, tuple(state.sequence))]
+                neighbors.append(State(loc, state.g + (len(sequence) - len(state.sequence)), state, state.sequence[:], state.t+1))
+                del visited[(loc, tuple(state.sequence), state.t)]
 
         return neighbors
 
@@ -127,15 +127,15 @@ class LowLevelPlan:
 
         # Check if the move violates any negative constraints
         for z, x, t in Node.negConstraints[agent]:
-            if t == state.g + 1 and (x == loc_after_move or x == frozenset((loc, loc_after_move))):
+            if t == state.t + 1 and (x == loc_after_move or x == frozenset((loc, loc_after_move))):
                 return -1
 
         for agent1, agent2, x, t1, t2 in Node.posConstraints[agent]:
-            if agent1 == agent and t1 == state.g + 1 and (
+            if agent1 == agent and t1 == state.t + 1 and (
                     x != loc_after_move and x != frozenset((loc, loc_after_move))):
                 return 0
 
-            elif agent2 == agent and t2 == state.g + 1 and (
+            elif agent2 == agent and t2 == state.t + 1 and (
                     x != loc_after_move and x != frozenset((loc, loc_after_move))):
                 return 0
 

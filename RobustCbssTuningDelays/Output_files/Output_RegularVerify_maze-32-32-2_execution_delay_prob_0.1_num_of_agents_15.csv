@@ -1,0 +1,2 @@
+Map,Desired Safe prob,Delay prob (Planning),Delay prob (Execution),Number of agents,Number of goals,Instance,Runtime,Offline Runtime,Online Runtime,Number Of Replans,Online Total Service Time,Sum of Planning Times for All Goals,SGAT,Offline Total Service Time,Min Safe Prob across Plans
+maze-32-32-2,0,0.1,0.1,15,50,4,40.409,40.409,0,0,894,2020.468,2914.468,799,0
